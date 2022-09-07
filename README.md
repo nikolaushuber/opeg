@@ -7,7 +7,12 @@ Opeg is a parser generator for Parsing Expression Grammars (PEGs). It takes a de
 
 ```txt 
 %{
-    open Ast 
+type ast = 
+    | Add of ast * ast 
+    | Sub of ast * ast 
+    | Mul of ast * ast 
+    | Div of ast * ast 
+    | Num of int 
 %}
 
 token:

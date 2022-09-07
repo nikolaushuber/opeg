@@ -1,5 +1,5 @@
 let main file_name out_name = 
-  let oc = open_out out_name in 
+  let oc = open_out (out_name ^ ".ml") in 
   let ic = open_in file_name in 
   let lexbuf = Lexing.from_channel ic in 
   let grammar = Opeg.Parser.parse Opeg.Lexer.read_token lexbuf in  
