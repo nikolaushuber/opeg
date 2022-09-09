@@ -1,5 +1,4 @@
-# Opeg
-## _OCaml PEG parser generator_
+# Opeg - _OCaml PEG parser generator_
 
 Opeg is a parser generator for Parsing Expression Grammars (PEGs). It takes a description of a grammar in PEG style and turns it into OCaml code that can then be included into any OCaml application. The parsing interface is similar to [menhir]. 
 
@@ -25,24 +24,24 @@ token:
     | NUMBER <int> 
     | EOF 
 
-parser "parse" <start>  
+parser "parse" start 
 
 %% 
 
-start -> ast: 
+start <ast>: 
     / e = expr EOF { e }
 
-expr -> ast: 
+expr <ast>: 
     / t = term "+" e = expr { Add (t, e) }
     / t1 = term "-" t2 = term { Sub (t1, t2) }
     / t = term { t }
 
-term -> ast:
+term <ast>:
     / a = atom "*" t = term { Mul (a, t) }
     / a1 = atom "/" a2 = atom { Div (a1, a2) }
     / a = atom { a } 
 
-atom -> ast:
+atom <ast>:
     / NUMBER<n> { Num n }
     / "(" e = expr ")" { e }
 ```
@@ -53,8 +52,10 @@ The overall syntax is similar to [menhir], however, the semantic of the grammar 
 
 You can install Opeg through [opam](https://opam.ocaml.org): 
 ```sh
-opam install opeg 
+opam pin add opeg https://github.com/nikolaushuber/opeg.git
 ```
+
+Once Opeg has reached a certain stability, it will also be available through the regular opam package repository. 
 
 ## Usage 
 
@@ -67,6 +68,24 @@ If your grammar is in grammar.peg, then the following will produce the file pars
 ```sh
 opeg grammar.peg -o parser
 ```
+
+If no output is defined, the generated file will have the same name as the input file. 
+
+## Development 
+
+This repository defines two different tools, *opeg* and *opeg_boot*. *Opeg_boot* is used for bootstrapping 
+the parser generator, it uses [menhir] to parse the grammar specification. 
+
+In order to start developing, you can do the following: 
+
+```sh
+git clone https://github.com/nikolaushuber/opeg.git  
+cd opeg 
+opam switch create . ocaml-base-compiler.4.14.0 -y 
+opam pin . -y 
+```
+
+This will install all dependencies and create both *opeg* and *opeg_boot*. 
 
 ## License
 
