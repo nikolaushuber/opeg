@@ -201,10 +201,7 @@ and " ^ name ^ " tknz =
     Not_found -> failwith ("Starting rule " ^ g.start_deriv ^ " not defined.")
   
 let gen_toplevel_fun (g : Grammar.t) = 
-  let name = match g.parser_name with 
-    | Some name -> name 
-    | None -> "parse" 
-  in 
+  let name =  g.parser_name in 
 "let " ^ name ^ " lexer lexbuf = 
   let tknz = make_tokenizer lexer lexbuf in 
   start tknz 

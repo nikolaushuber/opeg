@@ -1,0 +1,67 @@
+%{
+open Grammar 
+%}
+
+token: 
+    | TOK_KW_PARSER "parser" 
+    | TOK_KW_TOKEN "token" 
+    | TOK_HEADER <string> 
+    | TOK_SEM_ACTION <string> 
+    | TOK_NAME <string> 
+    | TOK_TYPE <string> 
+    | TOK_DOUBLE_DOTS ":" 
+    | TOK_CHOICE "/" 
+    | TOK_BAR "|" 
+    | TOK_EQUALS "=" 
+    | TOK_SEC_DIVIDE "%%" 
+    | TOK_EOF "eof" 
+
+parser "parse" start
+
+%% 
+
+start <Grammar.t>: 
+    / hd = TOK_HEADER "token" ":" tl = tokens "parser" name = TOK_NAME 
+    start_deriv = TOK_NAME "%%" rl = rules "eof" 
+        {
+            {
+                header = Some hd; 
+                parser_name = name;
+                start_deriv = start_deriv; 
+                tokens = tl; 
+                rules = rule_l;
+            }
+        }
+
+tokens <Grammar.tok list>: 
+    / t = tok tl = tokens { t :: tl }
+    / t = tok { [t] }
+
+tok <Grammar.tok>: 
+    / "|" TOK_NAME<n> TOK_TYPE<t> TOK_NAME<short> { (n, Some t, Some short) }
+    / "|" TOK_NAME<n> TOK_TYPE<t> { (n, Some t, None) }
+    / "|" TOK_NAME<n> TOK_NAME<short> { (n, None, Some short) }
+    / "|" TOK_NAME<n> { (n, None, None) }
+
+rules <Grammar.rule list>: 
+    / r = rule rl = rules { r :: rl }
+    / r = rule { [r] }
+
+rule <Grammar.rule>: 
+    / TOK_NAME<n> TOK_TYPE<t> ":" dl = derivs { (n, t, dl) }
+
+derivs <Grammar.deriv list>:
+    / d = deriv dl = derivs { d :: dl }
+    / d = deriv { [d] }
+
+deriv <Grammar.deriv>: 
+    / "/" sl = symbols TOK_SEM_ACTION<act> { (sl, act) }
+
+symbols <Grammar.symbol list>: 
+    / s = symbol sl = symbols { s :: sl }
+    / s = symbol { [s] }
+
+symbol <Grammar.symbol>:
+    / TOK_NAME<syn> "=" TOK_NAME<n> { Nonterminal (name, syn) }
+    / TOK_NAME<n> TOK_TYPE<lex> { Terminal (name, Some lex) }
+    / TOK_NAME<n> { Terminal (name, None) }

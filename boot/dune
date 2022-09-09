@@ -1,0 +1,11 @@
+(executable
+ (public_name opeg_boot)
+ (package opeg_boot)
+ (name main)
+ (libraries grammar utils))
+
+(ocamllex lexer)
+
+(menhir 
+ (modules parser)
+ (flags --explain))

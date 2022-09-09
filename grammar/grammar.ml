@@ -3,7 +3,7 @@
    and a list of derivation rules *)
 type t = {
   header : string option; 
-  parser_name: string option; 
+  parser_name: string; 
   start_deriv: string; 
   tokens: tok list; 
   rules: rule list 

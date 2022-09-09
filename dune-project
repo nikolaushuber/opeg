@@ -20,8 +20,16 @@
  (name opeg)
  (synopsis "PEG parser generator")
  (description "PEG parser generator for OCaml")
- (depends ocaml dune menhir)
+ (depends ocaml dune)
  (tags
   (compiler parsing)))
+
+(package 
+  (name opeg_boot)
+  (synopsis "Bootstrapping PEG parser generator")
+  (description "This PEG parser generator is used to boostrap Opeg")
+  (depends ocaml dune menhir)
+  (tags
+    (compiler parsing)))
 
 ; See the complete stanza docs at https://dune.readthedocs.io/en/stable/dune-files.html#dune-project

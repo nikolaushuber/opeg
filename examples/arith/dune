@@ -1,4 +1,10 @@
 (library
  (name arith))
 
+(rule 
+ (target parser.ml)
+ (deps parser.peg)
+ (action (run opeg %{deps} -o %{target})))
+
 (ocamllex lexer)
+

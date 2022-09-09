@@ -1,8 +1,0 @@
-(library
- (name opeg))
-
-
-(ocamllex lexer) 
-
-(menhir 
- (modules parser))

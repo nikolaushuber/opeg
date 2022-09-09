@@ -21,13 +21,11 @@ rule read_token = parse
 
     | ":" { TOK_DOUBLE_DOTS }
     | "/" { TOK_CHOICE }
-    | "->" { TOK_RET_ARROW }
     | "=" { TOK_EQUALS }
-    | "<" { TOK_LEFT_ARROW }
-    | ">" { TOK_RIGHT_ARROW }
+    | "<" { read_type (Buffer.create 10) lexbuf }
     | "%%" { TOK_SEC_DIVIDE }
     | "|" { TOK_BAR }
-    | "{" { read_semantic_action (Buffer.create 10) 0 lexbuf } (* REDO this *)
+    | "{" { read_semantic_action (Buffer.create 10) 0 lexbuf } 
     | "\"" (['!'-'~']* as id) "\"" { TOK_NAME (id) }
     | identifier as id { TOK_NAME (id) }
     | whitespace { read_token lexbuf }
@@ -48,3 +46,9 @@ and read_semantic_action buf depth = parse
     | newline { Lexing.new_line lexbuf; Buffer.add_char buf '\n'; read_semantic_action buf depth lexbuf }
     | _ as c { Buffer.add_char buf c; read_semantic_action buf depth lexbuf }
     | eof { raise (LexingError "Reached end of file inside semantic action") }
+
+and read_type buf = parse 
+    | ">" { TOK_TYPE (Buffer.contents buf) }
+    | newline { Lexing.new_line lexbuf; read_type buf lexbuf }
+    | _ as c {Buffer.add_char buf c; read_type buf lexbuf }
+    | eof { raise (LexingError "Reached end of file inside type information") }
