@@ -1,3 +1,5 @@
+open Grammar 
+
 let gen_header (g : Grammar.t) = 
   if 
     Option.is_some g.header 
@@ -53,12 +55,11 @@ let expect (tnz : tokenizer) (tok : token) =
     raise No_parse 
 "
 
-let gen_expect_function tok = 
-  let (name, _, _) = tok in 
-  "let expect_" ^ name ^ " (tknz : tokenizer) = 
+let gen_expect_function (tok : Grammar.Token.t) = 
+  "let expect_" ^ tok.name ^ " (tknz : tokenizer) = 
   let p_tok = peek_token tknz in 
   match p_tok with 
-  | " ^ name ^ " x -> 
+  | " ^ tok.name ^ " x -> 
     (
       let _ = get_token tknz in 
       x 
@@ -66,22 +67,23 @@ let gen_expect_function tok =
   | _ -> raise No_parse 
   "
 
-let gen_expect_functions (g : Grammar.t) = 
+let gen_expect_functions (g : Grammar.t) =
+  let open Token in  
   let toks = g.tokens in 
-  let toks_with_types = List.filter (fun (_, t, _) -> Option.is_some t) toks in 
+  let toks_with_types = List.filter (fun tk -> Option.is_some tk.ty) toks in 
   String.concat "\n" (List.map gen_expect_function toks_with_types)
   
 let gen_token_type (g : Grammar.t) = 
+  let open Token in 
   let token_to_string tok = 
-    let (name, _type, short) = tok in 
-    name ^ 
-    (match _type with 
+    tok.name ^ 
+    (match tok.ty with 
     | Some t -> " of " ^ t 
     | None -> "" 
     )
     ^ 
     (
-    match short with 
+    match tok.short with 
     | Some s -> " (* \"" ^ s ^ "\" *)"
     | None -> ""   
     )
@@ -92,13 +94,13 @@ let gen_token_type (g : Grammar.t) =
   String.concat "\n\t| " (List.map token_to_string token_list) 
 
 let gen_hash_tables (g : Grammar.t) = 
-  let gen_hash_table (r : Grammar.rule) = 
-    let (name, _type, _) = r in 
-    "let " ^ name ^ "_tbl : (int, (" ^ _type ^ " * int) option) Hashtbl.t = Hashtbl.create 100" 
+  let open Rule in 
+  let gen_hash_table (r : Grammar.Rule.t) = 
+    "let " ^ r.name ^ "_tbl : (int, (" ^ r.ty ^ " * int) option) Hashtbl.t = Hashtbl.create 100" 
   in 
 
   let rules = g.rules in 
-  let rules_without_start = List.filter (fun (name, _, _) -> name <> g.start_deriv) rules in 
+  let rules_without_start = List.filter (fun r -> r.name <> g.start_deriv) rules in 
   String.concat "\n" (List.map gen_hash_table rules_without_start) 
 
 let lookup_or_compute_string = 
@@ -127,40 +129,47 @@ let lookup_or_compute_string =
 "
 
 let gen_derivations (g : Grammar.t) = 
+  let open Token in 
   (* This links shortcuts to actual token names *)
   let tok_short_tbl = 
     let tbl = Hashtbl.create (List.length g.tokens) in 
     List.iter 
       (
-        fun (name, _, short) -> 
-          match short with 
-          | Some s -> Hashtbl.add tbl s name 
-          | None -> Hashtbl.add tbl name name 
+        fun tok -> 
+          match tok.short with 
+          | Some s -> Hashtbl.add tbl s tok.name 
+          | None -> Hashtbl.add tbl tok.name tok.name 
       ) 
     g.tokens; 
     tbl 
   in
 
-  let gen_symbol (s : Grammar.symbol) = match s with 
-    | Nonterminal (name, syn) -> 
+  let gen_symbol (s : Grammar.Symbol.t) = 
+    let open Symbol in 
+    match (s.name, s.ref, s.terminal) with 
+    | (name, Some syn, false) -> 
       "let " ^ syn ^ " = " ^ name ^ " tknz in" 
-    | Terminal (name, Some syn) -> 
+    | (name, None, false) -> 
+      "let _ = " ^ name ^ " tknz in" 
+    | (name, Some syn, true) -> 
       "let " ^ syn ^ " = expect_" ^ name ^ " tknz in" 
-    | Terminal (name, None) -> 
+    | (name, None, true) -> 
       try 
         "let _ = expect tknz " ^ Hashtbl.find tok_short_tbl name ^ " in" 
       with 
         Not_found -> failwith ("Unknown terminal symbol: '" ^ name ^ "'.")
   in 
 
-  let gen_alt (d : Grammar.deriv) (idx : int) (num_alt : int) = 
-    let (sym_l, act) = d in 
-"\t(* / " ^ String.concat " " (List.map Grammar.pp_symbol sym_l) ^ " { ... } *)\n" ^  
+  let gen_alt (d : Grammar.Alternative.t) (idx : int) (num_alt : int) = 
+    let pp_symbol _ = ""
+    in 
+
+"\t(* / " ^ String.concat " " (List.map pp_symbol d.symbols) ^ " { ... } *)\n" ^  
 "\tlet alt" ^ string_of_int idx ^ " tknz pos = 
   try
     " ^ 
-    (String.concat "\n\t\t" (List.map gen_symbol sym_l)) ^ 
-    "\n\t\t(" ^ act ^ ")    
+    (String.concat "\n\t\t" (List.map gen_symbol d.symbols)) ^ 
+    "\n\t\t(" ^ d.action ^ ")    
   with" ^ (
     if idx == num_alt then 
     "
@@ -174,27 +183,25 @@ let gen_derivations (g : Grammar.t) =
 " 
   in 
 
-  let gen_rule (r : Grammar.rule) = 
-    let (name, _, deriv_l) = r in 
-    let num_alt = List.length deriv_l in 
+  let gen_rule (r : Grammar.Rule.t) = 
+    let num_alt = List.length r.alts in 
 "
-and " ^ name ^ " tknz = 
-" ^ String.concat "\n" (List.rev (List.mapi (fun i d -> gen_alt d (i+1) num_alt) deriv_l))
+and " ^ r.name ^ " tknz = 
+" ^ String.concat "\n" (List.rev (List.mapi (fun i d -> gen_alt d (i+1) num_alt) r.alts))
 ^ 
-"\n\tlookup_or_compute tknz " ^ name ^ "_tbl alt1" 
+"\n\tlookup_or_compute tknz " ^ r.name ^ "_tbl alt1" 
   in 
 
-  let gen_start (r : Grammar.rule) = 
-    let (_, _, deriv_l) = r in 
-    let num_alt = List.length deriv_l in 
-"let rec start tknz =\n" ^ String.concat "\n" (List.rev (List.mapi (fun i d -> gen_alt d (i+1) num_alt) deriv_l))
+  let gen_start (r : Grammar.Rule.t) = 
+    let num_alt = List.length r.alts in 
+"let rec start tknz =\n" ^ String.concat "\n" (List.rev (List.mapi (fun i d -> gen_alt d (i+1) num_alt) r.alts))
 ^ 
 "\n\tlet pos = mark tknz in\n\talt1 tknz pos\n"
   in 
 
   try   
-    let start_rule = List.find (fun (name, _, _) -> String.equal name g.start_deriv) g.rules in 
-    let rules_without_start = List.filter (fun (name, _, _) -> name <> g.start_deriv) g.rules in 
+    let start_rule = List.find (fun r -> String.equal r.Rule.name g.start_deriv) g.rules in 
+    let rules_without_start = List.filter (fun r -> r.Rule.name <> g.start_deriv) g.rules in 
     gen_start start_rule ^ 
     String.concat "\n\n" (List.map gen_rule rules_without_start) 
   with 

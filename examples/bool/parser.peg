@@ -1,0 +1,22 @@
+%{
+type bexpr = 
+    | T 
+    | F
+    | If of bexpr * bexpr * bexpr 
+%}
+
+token:
+    | IF "if" 
+    | THEN "then" 
+    | ELSE "else" 
+    | VAL <bool>
+    | LPAREN "(" 
+    | RPAREN ")" 
+    | EOF "eof" 
+
+parser "parse" start 
+
+%% 
+
+start <bexpr>: 
+    / "eof" { T }

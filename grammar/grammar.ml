@@ -1,51 +1,94 @@
+exception Grammar_error of string
+
+module Symbol = struct 
+  type suffix = 
+    | Optional 
+
+  type t = 
+  {
+    name : string; 
+    ref : string option; 
+    terminal : bool;
+    suffix : suffix option; 
+  }
+
+  let pp (s : t) : string = 
+    (if Option.is_some s.ref then (Option.get s.ref) ^ " = " else "")
+    ^ (if s.terminal then "\"" ^ s.name ^ "\"" else s.name) ^ 
+    match s.suffix with 
+    | Some Optional -> "?" 
+    | None -> "" 
+end 
+
+module Action = struct 
+  type t = string 
+
+  let pp (a : t) : string = "{ " ^ a ^ " }"
+end 
+
+module Alternative = struct 
+  type t = 
+  {
+    symbols : Symbol.t list; 
+    action : Action.t; 
+  }
+
+  let pp (a : t) : string = 
+    "/ " ^ String.concat " " (List.map Symbol.pp a.symbols) ^ " " ^ 
+    Action.pp a.action
+end 
+
+module Rule = struct 
+  type t = 
+  {
+    name : string;
+    ty : string; 
+    alts : Alternative.t list; 
+  }
+
+  let pp (r : t) : string = 
+    r.name ^ " <" ^ r.ty ^ ">:\n\t" ^ 
+    String.concat "\n\t" (List.map Alternative.pp r.alts)  
+end 
+
+module Token = struct 
+  type t = 
+  {
+    name : string; 
+    ty : string option; 
+    short : string option; 
+  }
+
+  let pp (tok : t) : string = 
+    "[" ^ tok.name ^ 
+    (
+      match tok.ty with 
+      | Some s -> "," ^ s
+      | None -> "" 
+    ) ^  
+    (
+      match tok.short with 
+        | Some s -> ",\"" ^ s ^ "\""
+        | None -> "" 
+    )
+    ^ "]"
+end 
+
 (* A grammar can have a header, a name for the generated toplevel parse function, 
    a list of tokens, the name of the start derivation, 
    and a list of derivation rules *)
-type t = {
+type t = 
+{
   header : string option; 
   parser_name: string; 
   start_deriv: string; 
-  tokens: tok list; 
-  rules: rule list 
+  tokens: Token.t list; 
+  token_syns: (string, string) Hashtbl.t; 
+  rules: Rule.t list;  
 }
-
-(* A token has a name, an optional type, and potentially a shortcut *)
-and tok = string * string option * string option 
-
-(* Rules have a name, a type, and a list of derivations *)
-and rule = string * string * deriv list 
-
-(* A derivation is a list of symbols and a semantic action *)
-and deriv = symbol list * action 
-
-(* An action is simply an OCaml code snippet *)
-and action = string 
-
-(* Terminal have a name and possibly a lexeme, 
-   Nonterminals have a name and a synonym 
-*)
-and symbol = 
-  | Terminal of string * string option 
-  | Nonterminal of string * string  
-
-let pp_symbol = function 
-| Terminal (name, lex) -> "'" ^ name ^ "'"  ^ 
-  (
-    match lex with 
-    | Some l -> "<" ^ l ^ ">" 
-    | None -> "" 
-  )
-| Nonterminal (name, syn) -> syn ^ " = " ^ name 
-
-let pp_deriv (d : deriv) = 
-  let (sym_list, act) = d in 
-  "\t/ " ^ String.concat " " (List.map pp_symbol sym_list) ^ " { " ^ act ^ " } " 
-
-let pp_rule (r : rule) = 
-  let (name, _type, d_list) = r in 
-  name ^ "<" ^ _type ^ ">:\n" ^ 
-  String.concat "\n" (List.map pp_deriv d_list) 
 
 
 let pp (g : t) : string = 
-  String.concat "\n" (List.map pp_rule g.rules)
+  "Parser " ^ g.parser_name ^ "\n" ^ 
+  "Tokens: " ^ String.concat ";" (List.map Token.pp g.tokens) ^ "\n" ^ 
+  String.concat "\n" (List.map Rule.pp g.rules) ^ "\n"

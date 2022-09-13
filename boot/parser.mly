@@ -1,5 +1,5 @@
 %{
-    open Grammar 
+    open Parsetree 
 %}
 
 %token          TOK_KW_PARSER   "parser" 
@@ -12,16 +12,17 @@
 %token          TOK_CHOICE      "/"
 %token          TOK_BAR         "|" 
 %token          TOK_EQUALS      "=" 
+%token          TOK_OPTION      "?" 
 %token          TOK_SEC_DIVIDE  "%%" 
 %token          TOK_EOF 
 
-%start <Grammar.t> parse 
+%start <Parsetree.t> parse 
 
 %% 
 
 parse: 
     | hd = TOK_HEADER? "token" ":" 
-      tok_l = list(tok) "parser" name = TOK_NAME 
+      tok_l = list(tok) "parser" name = TOK_NAME
       start_deriv = TOK_NAME "%%" rule_l = list(rule) 
       TOK_EOF 
       {
@@ -46,5 +47,9 @@ deriv:
     | "/" sym_l = list(symbol) act = TOK_SEM_ACTION { (sym_l, act) }
 
 symbol:
-    | syn = TOK_NAME "=" name = TOK_NAME { Nonterminal (name, syn) } 
-    | name = TOK_NAME lex = TOK_TYPE? { Terminal (name, lex) }
+    | syn = ioption(terminated(TOK_NAME, "=")) name = TOK_NAME suff = suffix { (name, syn, suff) } 
+
+suffix: 
+    | { None }
+    | "?" { Some Optional }
+

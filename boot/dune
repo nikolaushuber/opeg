@@ -2,7 +2,7 @@
  (public_name opeg_boot)
  (package opeg_boot)
  (name main)
- (libraries grammar utils))
+ (libraries grammar utils parsetree))
 
 (ocamllex lexer)
 

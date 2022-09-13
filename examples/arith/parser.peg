@@ -35,5 +35,5 @@ term <ast>:
     / a = atom { a } 
 
 atom <ast>:
-    / NUMBER<n> { Num n }
+    / n = NUMBER { Num n }
     / "(" e = expr ")" { e }
