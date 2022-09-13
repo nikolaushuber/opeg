@@ -1,4 +1,4 @@
-(* A grammar can have a prolog, a name for the generated toplevel parse function, 
+(* A grammar can have a header, a name for the generated toplevel parse function, 
    a list of tokens, the name of the start derivation, 
    and a list of derivation rules *)
 type t = {
