@@ -1,7 +1,3 @@
-%{
-
-%}
-
 token:
     | TOK_A "a"
     | TOK_B "b" 
@@ -13,4 +9,10 @@ parser "parse" start
 %% 
 
 start <bool>:
-    / "a"+ "b"? "c" "eof" { true }
+    / "a"? rule1 "c" "eof" { true }
+    / "c" "eof" { true }
+
+rule1 <bool>:
+    / "b" "b" { true }
+    / "b" { true }
+

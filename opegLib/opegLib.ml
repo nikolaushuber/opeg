@@ -1,3 +1,5 @@
+exception Parse_error 
+
 type 'a parse_result = 
 | No_parse 
 | Parse of 'a 
@@ -38,16 +40,45 @@ tnz.pos <- tnz.pos + 1;
 tok
 
 let expect (tnz) (tok) = 
-let p_tok = peek_token tnz in  
-if p_tok = tok then 
-  Parse (get_token tnz)
-else 
-  No_parse 
+  let p_tok = peek_token tnz in  
+  if p_tok = tok then 
+    Parse (get_token tnz)
+  else 
+    No_parse 
 
 let return res tknz pos = match res with 
-| Parse x -> Parse x 
-| No_parse -> (reset tknz pos; No_parse) 
+  | Parse x -> Parse x 
+  | No_parse -> (reset tknz pos; No_parse) 
 
 let return_or_try_next res tknz pos next = match res with 
-| Parse x -> Parse x 
-| No_parse -> (reset tknz pos; next tknz)
+  | Parse x -> Parse x 
+  | No_parse -> (reset tknz pos; next tknz)
+
+let optional res = match res with 
+  | Parse x -> Parse (Some x)
+  | No_parse -> Parse (None)
+
+
+let lookup_or_compute tknz tbl rule = 
+  let pos = mark tknz in 
+  if Hashtbl.mem tbl pos then 
+    match Hashtbl.find tbl pos with 
+    | Some (ast, new_pos) -> (
+      reset tknz new_pos; 
+      Parse ast) 
+    | None -> No_parse
+  else 
+    let res = rule tknz in 
+    match res with 
+    | Parse x -> 
+      (
+        let new_pos = mark tknz in 
+        Hashtbl.add tbl pos (Some (x, new_pos)); 
+        res 
+      )
+    | No_parse -> 
+      (
+        Hashtbl.add tbl pos None; 
+        No_parse 
+      )
+        
