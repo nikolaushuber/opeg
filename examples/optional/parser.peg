@@ -2,6 +2,7 @@ token:
     | TOK_A "a"
     | TOK_B "b" 
     | TOK_C "c" 
+    | TOK_NUM <int> 
     | TOK_EOF "eof"
 
 parser "parse" start
@@ -9,9 +10,13 @@ parser "parse" start
 %% 
 
 start <bool>:
-    / "a"? rule1+ "c" "eof" { true }
+    / "a"? il = rule1+ "c" "eof" { 
+        let sum = List.fold_left (+) 0 in 
+        let int_sum = sum il in 
+        int_sum mod 2 == 0 
+    }
     / "c"* "eof" { true }
 
-rule1 <bool>:
-    / "b" { true }
+rule1 <int>:
+    / n = TOK_NUM { n }
 

@@ -14,15 +14,15 @@ let gen_header (g : Grammar.t) =
   ) ^ "open OpegLib\n\n" 
 
 let gen_expect_function (tok : Grammar.Token.t) = 
-  "let expect_" ^ tok.name ^ " (tknz : tokenizer) = 
+  "let expect_" ^ tok.name ^ " tknz = 
   let p_tok = peek_token tknz in 
   match p_tok with 
   | " ^ tok.name ^ " x -> 
     (
       let _ = get_token tknz in 
-      x 
+      Parse x 
     )
-  | _ -> raise No_parse 
+  | _ -> No_parse 
   "
 
 let gen_expect_functions (g : Grammar.t) =
@@ -51,7 +51,7 @@ let gen_token_type (g : Grammar.t) =
   let token_list = g.tokens in 
   "type token =\n\t| " ^
   String.concat "\n\t| " (List.map token_to_string token_list) 
-  ^ "\n"
+  ^ "\n\n"
 
 let gen_hash_tables (g : Grammar.t) = 
   let open Rule in 
