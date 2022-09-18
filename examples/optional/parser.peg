@@ -9,10 +9,9 @@ parser "parse" start
 %% 
 
 start <bool>:
-    / "a"? rule1 "c" "eof" { true }
-    / "c" "eof" { true }
+    / "a"? rule1+ "c" "eof" { true }
+    / "c"* "eof" { true }
 
 rule1 <bool>:
-    / "b" "b" { true }
     / "b" { true }
 

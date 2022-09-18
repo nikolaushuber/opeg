@@ -111,9 +111,21 @@ let gen_derivations (g : Grammar.t) =
     lhs ^ 
     match s.suffix with 
     | Empty -> parse_phrase ^ " in" 
-    | Optional -> "optional( " ^ parse_phrase ^ " ) in" 
-    | Plus -> "parse_nonempty_list( " ^ parse_phrase ^ " ) in" 
-    | Star -> "parse_list( " ^ parse_phrase ^ " ) in"  
+    | Optional -> "optional ( " ^ parse_phrase ^ " ) in" 
+    | Plus -> (
+      (* Is it a list of terminals? *)
+      match (s.ref, s.terminal) with 
+      | (Some _, true) -> "nonempty_lexeme_list " ^ parse_phrase ^ " in" 
+      | (None, true) -> "nonempty_terminal_list " ^ parse_phrase ^ " in" 
+      | (_, false) -> "nonempty_nonterminal_list " ^ parse_phrase ^ " in" 
+    )
+    | Star -> (
+      (* Is it a list of terminals? *)
+      match (s.ref, s.terminal) with 
+      | (Some _, true) -> "lexeme_list " ^ parse_phrase ^ " in" 
+      | (None, true) -> "terminal_list " ^ parse_phrase ^ " in" 
+      | (_, false) -> "nonterminal_list " ^ parse_phrase ^ " in" 
+    )
 
   in 
 
