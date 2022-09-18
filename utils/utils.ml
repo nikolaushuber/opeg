@@ -103,6 +103,32 @@ let gen_hash_tables (g : Grammar.t) =
   let rules_without_start = List.filter (fun r -> r.name <> g.start_deriv) rules in 
   String.concat "\n" (List.map gen_hash_table rules_without_start) 
 
+let gen_lib = 
+" 
+let parse_option rule tknz = 
+  let pos = mark tknz in 
+  try 
+    Some (rule tknz) 
+  with 
+    No_parse -> (reset tknz pos; None) 
+
+let parse_list rule tknz = 
+  let rec parse_list_with_acc rule tknz acc = 
+    let pos = mark tknz in 
+    try 
+      let el = rule tknz in 
+      parse_list_with_acc rule tknz (el :: acc) 
+    with
+      No_parse -> (reset tknz pos; acc) 
+  in 
+  List.rev (parse_list_with_acc rule tknz []) 
+
+let parse_nonempty_list rule tknz = 
+  let l = parse_list rule tknz in 
+  if List.length l > 0 then l else raise No_parse 
+"
+
+
 let lookup_or_compute_string = 
 "let lookup_or_compute tknz tbl rule = 
   let pos = mark tknz in 
@@ -146,18 +172,32 @@ let gen_derivations (g : Grammar.t) =
 
   let gen_symbol (s : Grammar.Symbol.t) = 
     let open Symbol in 
-    match (s.name, s.ref, s.terminal) with 
-    | (name, Some syn, false) -> 
-      "let " ^ syn ^ " = " ^ name ^ " tknz in" 
-    | (name, None, false) -> 
-      "let _ = " ^ name ^ " tknz in" 
-    | (name, Some syn, true) -> 
-      "let " ^ syn ^ " = expect_" ^ name ^ " tknz in" 
-    | (name, None, true) -> 
-      try 
-        "let _ = expect tknz " ^ Hashtbl.find tok_short_tbl name ^ " in" 
-      with 
-        Not_found -> failwith ("Unknown terminal symbol: '" ^ name ^ "'.")
+    (* Is there a name binding for the parse result? *)
+    let lhs = match s.ref with 
+      | None -> "let _ = " 
+      | Some s -> "let " ^ s ^ " = " 
+    in 
+
+    (* Construct the actual parse phrase *)
+    let parse_phrase = match (s.ref, s.terminal) with 
+      | (Some _, true) -> "expect_" ^ s.name ^ " tknz" 
+      | (None, true) -> 
+        (
+          try 
+            "expect tknz " ^ Hashtbl.find tok_short_tbl s.name 
+          with 
+            Not_found -> failwith ("Unknown terminal symbol: '" ^ s.name ^ "'.")
+        )
+      | (_, false) -> s.name ^ " tknz" 
+    in
+
+    lhs ^ 
+    match s.suffix with 
+    | Empty -> parse_phrase ^ " in" 
+    | Optional -> "parse_option( " ^ parse_phrase ^ " ) in" 
+    | Plus -> "parse_nonempty_list( " ^ parse_phrase ^ " ) in" 
+    | Star -> "parse_list( " ^ parse_phrase ^ " ) in"  
+
   in 
 
   let gen_alt (d : Grammar.Alternative.t) (idx : int) (num_alt : int) = 
@@ -213,3 +253,14 @@ let gen_toplevel_fun (g : Grammar.t) =
   let tknz = make_tokenizer lexer lexbuf in 
   start tknz 
 "
+
+let string_of_grammar (grammar : Grammar.t) = 
+  "\n\n" ^ (gen_header grammar) ^
+  "\n\n" ^ (gen_token_type grammar) ^
+  "\n\n" ^ (tokenizer_string) ^
+  "\n\n" ^ (gen_lib) ^ 
+  "\n\n" ^ (gen_expect_functions grammar) ^
+  "\n\n" ^ (gen_hash_tables grammar) ^
+  "\n\n" ^ (lookup_or_compute_string) ^
+  "\n\n" ^ (gen_derivations grammar) ^
+  "\n\n" ^ (gen_toplevel_fun grammar) 

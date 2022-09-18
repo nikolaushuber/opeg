@@ -2,22 +2,27 @@ exception Grammar_error of string
 
 module Symbol = struct 
   type suffix = 
+    | Empty 
     | Optional 
+    | Plus 
+    | Star 
 
   type t = 
   {
     name : string; 
     ref : string option; 
     terminal : bool;
-    suffix : suffix option; 
+    suffix : suffix; 
   }
 
   let pp (s : t) : string = 
     (if Option.is_some s.ref then (Option.get s.ref) ^ " = " else "")
     ^ (if s.terminal then "\"" ^ s.name ^ "\"" else s.name) ^ 
     match s.suffix with 
-    | Some Optional -> "?" 
-    | None -> "" 
+    | Optional -> "?" 
+    | Empty -> "" 
+    | Plus -> "+" 
+    | Star -> "*" 
 end 
 
 module Action = struct 

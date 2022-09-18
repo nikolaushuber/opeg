@@ -1,5 +1,5 @@
-(executable
- (public_name opeg)
- (package opeg)
- (name main)
- (libraries lexer parser utils))
+; (executable
+;  (public_name opeg)
+;  (package opeg)
+;  (name main)
+;  (libraries lexer parser utils))

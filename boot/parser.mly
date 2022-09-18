@@ -13,6 +13,8 @@
 %token          TOK_BAR         "|" 
 %token          TOK_EQUALS      "=" 
 %token          TOK_OPTION      "?" 
+%token          TOK_STAR        "*" 
+%token          TOK_PLUS        "+" 
 %token          TOK_SEC_DIVIDE  "%%" 
 %token          TOK_EOF 
 
@@ -50,6 +52,8 @@ symbol:
     | syn = ioption(terminated(TOK_NAME, "=")) name = TOK_NAME suff = suffix { (name, syn, suff) } 
 
 suffix: 
-    | { None }
-    | "?" { Some Optional }
+    | { Empty }
+    | "?" { Optional }
+    | "+" { Plus }
+    | "*" { Star }
 

@@ -1,0 +1,3 @@
+(library 
+ (name opegLib)
+ (public_name opegLib))

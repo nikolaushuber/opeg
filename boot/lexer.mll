@@ -23,6 +23,8 @@ rule read_token = parse
     | "/" { TOK_CHOICE }
     | "=" { TOK_EQUALS }
     | "?" { TOK_OPTION }
+    | "+" { TOK_PLUS }
+    | "*" { TOK_STAR }
     | "<" { read_type (Buffer.create 10) lexbuf }
     | "%%" { TOK_SEC_DIVIDE }
     | "|" { TOK_BAR }

@@ -1,21 +1,13 @@
-let main file_name _ = 
-  (* let oc = open_out (out_name ^ ".ml") in  *)
+let main file_name out_name = 
+  let oc = open_out (out_name ^ ".ml") in 
   let ic = open_in file_name in 
   let lexbuf = Lexing.from_channel ic in 
   let pt = Parser.parse Lexer.read_token lexbuf in  
   let grammar = Parsetree.to_grammar pt in 
-  print_endline (Grammar.pp grammar); 
-(* 
-  Printf.fprintf oc "%s\n\n" (Utils.gen_header grammar); 
-  Printf.fprintf oc "%s\n\n" (Utils.gen_token_type grammar); 
-  Printf.fprintf oc "%s\n\n" (Utils.tokenizer_string); 
-  Printf.fprintf oc "%s\n\n" (Utils.gen_expect_functions grammar); 
-  Printf.fprintf oc "%s\n\n" (Utils.gen_hash_tables grammar); 
-  Printf.fprintf oc "%s\n\n" (Utils.lookup_or_compute_string); 
-  Printf.fprintf oc "%s\n\n" (Utils.gen_derivations grammar); 
-  Printf.fprintf oc "%s\n\n" (Utils.gen_toplevel_fun grammar); 
+  
+  Printf.fprintf oc "%s" (Utils.string_of_grammar grammar); 
 
-  close_out oc;  *)
+  close_out oc;  
   close_in ic
 
 let usage_msg = "opeg <file> -o <output>" 

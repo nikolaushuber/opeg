@@ -1,0 +1,16 @@
+%{
+
+%}
+
+token:
+    | TOK_A "a"
+    | TOK_B "b" 
+    | TOK_C "c" 
+    | TOK_EOF "eof"
+
+parser "parse" start
+
+%% 
+
+start <bool>:
+    / "a"+ "b"? "c" "eof" { true }
