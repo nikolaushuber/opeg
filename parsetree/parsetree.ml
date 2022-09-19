@@ -1,5 +1,4 @@
 type symb_suffix = 
-  | Empty
   | Optional
   | Plus 
   | Star 
@@ -18,7 +17,7 @@ and pt_rule = string * string * pt_alt list
 
 and pt_alt = pt_symb list * string 
 
-and pt_symb = string * string option * symb_suffix
+and pt_symb = string * string option * symb_suffix option
 
 let to_grammar (pt : t) : Grammar.t = 
   let tok_list = List.map (fun (n, t, s) -> 
@@ -65,10 +64,10 @@ let to_grammar (pt : t) : Grammar.t =
           let syms = List.map (
             fun (n, ref, suff) -> 
               let _suff : Grammar.Symbol.suffix = match suff with 
-              | Optional -> Optional 
-              | Empty -> Empty 
-              | Plus -> Plus 
-              | Star -> Star 
+              | Some Optional -> Optional 
+              | None -> Empty 
+              | Some Plus -> Plus 
+              | Some Star -> Star 
             in 
               {
                 Grammar.Symbol.name = n;

@@ -49,10 +49,9 @@ deriv:
     | "/" sym_l = list(symbol) act = TOK_SEM_ACTION { (sym_l, act) }
 
 symbol:
-    | syn = ioption(terminated(TOK_NAME, "=")) name = TOK_NAME suff = suffix { (name, syn, suff) } 
+    | syn = ioption(terminated(TOK_NAME, "=")) name = TOK_NAME suff = suffix? { (name, syn, suff) } 
 
 suffix: 
-    | { Empty }
     | "?" { Optional }
     | "+" { Plus }
     | "*" { Star }

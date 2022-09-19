@@ -1,7 +1,3 @@
-%{
-open Grammar 
-%}
-
 token: 
     | TOK_KW_PARSER "parser" 
     | TOK_KW_TOKEN "token" 
@@ -13,6 +9,9 @@ token:
     | TOK_CHOICE "/" 
     | TOK_BAR "|" 
     | TOK_EQUALS "=" 
+    | TOK_OPTION "?" 
+    | TOK_STAR "*" 
+    | TOK_PLUS "+" 
     | TOK_SEC_DIVIDE "%%" 
     | TOK_EOF "eof" 
 
@@ -20,48 +19,33 @@ parser "parse" start
 
 %% 
 
-start <Grammar.t>: 
-    / TOK_HEADER<hd> "token" ":" tl = tokens "parser" TOK_NAME<name> 
-    TOK_NAME<start_deriv> "%%" rl = rules "eof" 
+start <Parsetree.t>: 
+    / hd = TOK_HEADER? "token" ":" tl = tok+ "parser" name = TOK_NAME 
+    start_deriv = TOK_NAME "%%" rl = rule+ "eof" 
         {
             {
-                header = Some hd; 
+                header = hd; 
                 parser_name = name;
                 start_deriv = start_deriv; 
                 tokens = tl; 
                 rules = rl;
-            }
+            } 
         }
 
-tokens <Grammar.tok list>: 
-    / t = tok tl = tokens { t :: tl }
-    / t = tok { [t] }
+tok <Parsetree.pt_tok>: 
+    / "|" n = TOK_NAME t = TOK_TYPE? short = TOK_NAME? { (n, t, short) }
 
-tok <Grammar.tok>: 
-    / "|" TOK_NAME<n> TOK_TYPE<t> TOK_NAME<short> { (n, Some t, Some short) }
-    / "|" TOK_NAME<n> TOK_TYPE<t> { (n, Some t, None) }
-    / "|" TOK_NAME<n> TOK_NAME<short> { (n, None, Some short) }
-    / "|" TOK_NAME<n> { (n, None, None) }
+rule <Parsetree.pt_rule>: 
+    / n = TOK_NAME t = TOK_TYPE ":" dl = alt+ { (n, t, dl) }
 
-rules <Grammar.rule list>: 
-    / r = rule rl = rules { r :: rl }
-    / r = rule { [r] }
+alt <Parsetree.pt_alt>: 
+    / "/" sl = symbol* act = TOK_SEM_ACTION { (sl, act) }
 
-rule <Grammar.rule>: 
-    / TOK_NAME<n> TOK_TYPE<t> ":" dl = derivs { (n, t, dl) }
+symbol <Parsetree.pt_symb>:
+    / syn = TOK_NAME "=" n = TOK_NAME suff = suffix? { (n, Some syn, suff) }
+    / n = TOK_NAME suff = suffix? { (n, None, suff) }
 
-derivs <Grammar.deriv list>:
-    / d = deriv dl = derivs { d :: dl }
-    / d = deriv { [d] }
-
-deriv <Grammar.deriv>: 
-    / "/" sl = symbols TOK_SEM_ACTION<act> { (sl, act) }
-
-symbols <Grammar.symbol list>: 
-    / s = symbol sl = symbols { s :: sl }
-    / s = symbol { [s] }
-
-symbol <Grammar.symbol>:
-    / TOK_NAME<syn> "=" TOK_NAME<n> { Nonterminal (n, syn) }
-    / TOK_NAME<n> TOK_TYPE<lex> { Terminal (n, Some lex) }
-    / TOK_NAME<n> { Terminal (n, None) }
+suffix <Parsetree.symb_suffix>: 
+    / "?" { Optional }
+    / "+" { Plus }
+    / "*" { Star }

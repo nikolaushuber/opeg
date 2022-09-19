@@ -129,7 +129,7 @@ let gen_derivations (g : Grammar.t) =
 
   in 
 
-  let gen_alt (d : Grammar.Alternative.t) (idx : int) (num_alt : int) = 
+  let gen_alt (d : Grammar.Alternative.t) (idx : int) (num_alt : int) (ty : string) = 
     let pp_symbol s = Grammar.Symbol.pp s 
     in 
 
@@ -138,7 +138,7 @@ let gen_derivations (g : Grammar.t) =
     let res =
       " ^ 
       (String.concat "\n\t\t\t" (List.map gen_symbol d.symbols)) ^ 
-      "\n\t\t\tParse (" ^ d.action ^ ")    
+      "\n\t\t\tParse ((" ^ d.action ^ ") : " ^ ty ^ ")   
     in" ^ (
       if idx == num_alt then 
       "
@@ -157,7 +157,8 @@ let gen_derivations (g : Grammar.t) =
 "
 and " ^ r.name ^ " tknz = 
   let pos = mark tknz in 
-" ^ String.concat "\n" (List.rev (List.mapi (fun i d -> gen_alt d (i+1) num_alt) r.alts))
+
+  " ^ String.concat "\n" (List.rev (List.mapi (fun i d -> gen_alt d (i+1) num_alt r.ty) r.alts))
 ^ 
 "\n\tlookup_or_compute tknz " ^ r.name ^ "_tbl alt1" 
   in 
@@ -165,7 +166,7 @@ and " ^ r.name ^ " tknz =
   let gen_start (r : Grammar.Rule.t) (_rec : bool) = 
     let num_alt = List.length r.alts in 
 "let" ^ (if _rec then " rec " else " ") ^ "start tknz =\n" ^
-"\tlet pos = mark tknz in\n" ^ String.concat "\n" (List.rev (List.mapi (fun i d -> gen_alt d (i+1) num_alt) r.alts))
+"\tlet pos = mark tknz in\n\n" ^ String.concat "\n" (List.rev (List.mapi (fun i d -> gen_alt d (i+1) num_alt r.ty) r.alts))
 ^ 
 "\n\talt1 tknz\n"
   in 

@@ -115,3 +115,21 @@ let nonempty_terminal_list expect tknz tok =
   match res with 
   | Parse xl -> if List.length xl > 0 then res else (reset tknz pos; No_parse)
   | No_parse -> (failwith "terminal_list should never return No_parse")
+
+let lexeme_list expect tknz = 
+  let rec _inner expect tknz acc = 
+    let pos = mark tknz in 
+    let res = expect tknz in 
+    match res with 
+    | Parse x -> _inner expect tknz (x :: acc) 
+    | No_parse -> (reset tknz pos; Parse (List.rev acc))
+  in 
+  _inner expect tknz []  
+
+let nonempty_lexeme_list expect tknz = 
+  let pos = mark tknz in 
+  let res = lexeme_list expect tknz in 
+  match res with 
+  | Parse xl -> if List.length xl > 0 then res else (reset tknz pos; No_parse) 
+  | No_parse -> (failwith "lexeme_list should never return No_parse") 
+
