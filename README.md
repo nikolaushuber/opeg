@@ -16,7 +16,7 @@ opam pin add opeg https://github.com/nikolaushuber/opeg.git -y
 ```
 
 Once Opeg has reached a certain stability, it will also be available through the regular opam package repository. 
-
+ 
 ## Usage  
 
 ```sh
