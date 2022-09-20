@@ -183,7 +183,7 @@ let interpret (s : string) : int =
   |> eval 
 ``` 
 
-As you can see, we have defined a recursive evaluator function for expressions of type `ast` which we defined above. I also included a function `interpret` which takes an arithmetic expression as a string and converts it to the evaluated integer. As you can see, the generated parser interface is the same as the one you get from [menhir](http://gallium.inria.fr/~fpottier/menhir/). 
+As you can see, we have defined a recursive evaluator function for expressions of type `ast` which we defined above. We also included a function `interpret` which takes an arithmetic expression as a string and converts it to the evaluated integer. As you can see, the generated parser interface is the same as the one you get from [menhir](http://gallium.inria.fr/~fpottier/menhir/). 
 
 ## Using Dune 
 

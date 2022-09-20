@@ -12,6 +12,7 @@ bug-reports: "https://github.com/nikolaushuber/opeg/issues"
 depends: [
   "ocaml"
   "dune" {>= "3.4"}
+  "opegLib"
   "odoc" {with-doc}
 ]
 build: [

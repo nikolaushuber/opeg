@@ -20,7 +20,7 @@
  (name opeg)
  (synopsis "PEG parser generator")
  (description "PEG parser generator for OCaml")
- (depends ocaml dune)
+ (depends ocaml dune opegLib)
  (tags
   (compiler parsing)))
 
@@ -28,7 +28,7 @@
   (name opeg_boot)
   (synopsis "Bootstrapping PEG parser generator")
   (description "This PEG parser generator is used to boostrap Opeg")
-  (depends ocaml dune menhir)
+  (depends ocaml dune menhir opegLib)
   (tags
     (compiler parsing)))
 
