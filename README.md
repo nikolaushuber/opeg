@@ -8,7 +8,7 @@ Please have a look at the quickstart [tutorial](quickstart.md) to get an idea of
 
 ## Installation
 
-You can install Opeg through [opam](https://opam.ocaml.org): 
+There are two components to parser generation with `Opeg`. The tool `opeg` is the actual parser geneator. The generated code will make calls to functions from `opegLib`. Both can be installed through [opam](https://opam.ocaml.org): 
 
 ```sh
 opam pin add opegLib https://github.com/nikolaushuber/opeg.git -y
@@ -55,6 +55,7 @@ This will install all dependencies and create both *opeg* and *opeg_boot*.
 - Evaluate performance against [menhir] 
 - Try and see if we can use OCaml's Lazy module instead of hashtables 
 - Tune initial hashtable size   
+- Add an option to statically copy the opegLib code into the generated parser
 
 ## License
 
