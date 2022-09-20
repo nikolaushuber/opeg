@@ -4,7 +4,7 @@
 
 ## Tutorial 
 
-Please have a look at the quickstart [tutorial](quickstart.md) to get an idea of how to use `Opeg`. 
+Please have a look at the quickstart [tutorial](quickstart.md) to get an idea of how to use `Opeg`. Once you have understood it you can have a look at the grammar file describing the meta-grammar (i.e. the grammar of grammar files) in [parser/parser.peg](parser/parser.peg)
 
 ## Installation
 
@@ -46,6 +46,15 @@ opam pin . -y
 ```
 
 This will install all dependencies and create both *opeg* and *opeg_boot*. 
+
+## Todo 
+
+- ~~Bootstrap the grammar parser~~
+- ~~Include convenience operators like ?, +, *~~
+- Add support for left recursion 
+- Evaluate performance against [menhir] 
+- Try and see if we can use OCaml's Lazy module instead of hashtables 
+- Tune initial hashtable size   
 
 ## License
 
