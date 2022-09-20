@@ -11,12 +11,13 @@ Please have a look at the quickstart [tutorial](quickstart.md) to get an idea of
 You can install Opeg through [opam](https://opam.ocaml.org): 
 
 ```sh
-opam pin add opeg https://github.com/nikolaushuber/opeg.git
+opam pin add opegLib https://github.com/nikolaushuber/opeg.git -y
+opam pin add opeg https://github.com/nikolaushuber/opeg.git -y
 ```
 
 Once Opeg has reached a certain stability, it will also be available through the regular opam package repository. 
 
-## Usage 
+## Usage  
 
 ```sh
 opeg [file] -o [output]
