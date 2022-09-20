@@ -1,4 +1,4 @@
 _build/
 _opam/ 
-examples/**/*.ml
-examples/**/*.mli
+examples/**/parser.ml
+examples/**/parser.mli

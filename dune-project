@@ -18,7 +18,6 @@
 
 (package
  (name opeg)
- (allow_empty)
  (synopsis "PEG parser generator")
  (description "PEG parser generator for OCaml")
  (depends ocaml dune)

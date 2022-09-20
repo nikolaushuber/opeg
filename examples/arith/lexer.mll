@@ -1,5 +1,7 @@
 {
   open Parser
+
+  exception LexingError of string
 }
 
 let whitespace = [' ' '\t' '\r']+ 
@@ -16,4 +18,5 @@ rule read_token = parse
     | whitespace { read_token lexbuf }
     | integer as i { NUMBER(int_of_string i) }
     | eof { EOF }
+    | _ as c { raise (LexingError ("Lexer encountered unknown character: " ^ Char.escaped c)) }
 

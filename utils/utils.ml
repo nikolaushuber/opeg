@@ -69,7 +69,7 @@ let gen_hash_resets (g : Grammar.t) =
     "Hashtbl.reset " ^ r.name ^ "_tbl;" 
   in 
   let rules_without_start = List.filter (fun r -> r.name <> g.start_deriv) g.rules in 
-  String.concat "\n" (List.map gen_hash_reset rules_without_start)  
+  String.concat "\n\t" (List.map gen_hash_reset rules_without_start)  
 
 let gen_derivations (g : Grammar.t) = 
   let open Token in 
@@ -158,7 +158,7 @@ let gen_derivations (g : Grammar.t) =
 and " ^ r.name ^ " tknz = 
   let pos = mark tknz in 
 
-  " ^ String.concat "\n" (List.rev (List.mapi (fun i d -> gen_alt d (i+1) num_alt r.ty) r.alts))
+" ^ String.concat "\n" (List.rev (List.mapi (fun i d -> gen_alt d (i+1) num_alt r.ty) r.alts))
 ^ 
 "\n\tlookup_or_compute tknz " ^ r.name ^ "_tbl alt1" 
   in 

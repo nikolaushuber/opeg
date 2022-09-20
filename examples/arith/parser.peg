@@ -17,11 +17,11 @@ token:
     | NUMBER <int> 
     | EOF 
 
-parser "parse" start 
+parser "parse" toplevel 
 
 %% 
 
-start <ast>: 
+toplevel <ast>: 
     / e = expr EOF { e }
 
 expr <ast>: 
