@@ -2,7 +2,7 @@ let main file_name out_name =
   let oc = open_out (out_name ^ ".ml") in 
   let ic = open_in file_name in 
   let lexbuf = Lexing.from_channel ic in 
-  let pt = Parser.parse Lexer.read_token lexbuf in  
+  let pt = Boot_parser.parse Lexer.read_token lexbuf in  
   let grammar = Parsetree.to_grammar pt in 
   
   Printf.fprintf oc "%s" (Utils.string_of_grammar grammar); 

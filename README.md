@@ -29,7 +29,7 @@ If your grammar is in grammar.peg, then the following will produce the file pars
 opeg grammar.peg -o parser
 ```
 
-If no output is defined, the generated file will have the same name as the input file. 
+If no output is defined, no code will be generated. 
 
 ## Development 
 

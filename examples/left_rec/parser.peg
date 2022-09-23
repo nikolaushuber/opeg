@@ -1,0 +1,39 @@
+%{
+type ast = 
+    | Add of ast * ast 
+    | Sub of ast * ast 
+    | Mul of ast * ast 
+    | Div of ast * ast 
+    | Num of int 
+%}
+
+token:
+    | ADD "+" 
+    | SUB "-" 
+    | MUL "*" 
+    | DIV "/" 
+    | LPAREN "("  
+    | RPAREN ")" 
+    | NUMBER <int> 
+    | EOF 
+
+parser "parse" toplevel 
+
+%% 
+
+toplevel <ast>: 
+    / e = expr EOF { e }
+
+expr <ast>: 
+    / e = expr "+" t = term { Add (e, t) }
+    / e = expr "-" t = term { Sub (e, t) }
+    / t = term { t }
+
+term <ast>:
+    / t = term "*" a = atom { Mul (t, a) }
+    / t = term "/" a = atom { Div (t, a) }
+    / a = atom { a } 
+
+atom <ast>:
+    / n = NUMBER { Num n }
+    / "(" e = expr ")" { e }

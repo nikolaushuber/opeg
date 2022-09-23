@@ -1,5 +1,5 @@
 {
-    open Parser 
+    open Boot_parser 
 
     exception LexingError of string 
 }

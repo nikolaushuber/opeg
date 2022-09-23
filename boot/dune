@@ -7,5 +7,5 @@
 (ocamllex lexer)
 
 (menhir 
- (modules parser)
+ (modules boot_parser)
  (flags --explain))
