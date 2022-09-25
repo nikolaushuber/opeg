@@ -82,6 +82,52 @@ let lookup_or_compute tknz tbl rule =
         No_parse 
       )
         
+let direct_left_recurse tknz tbl rule = 
+  let pos = mark tknz in 
+  if Hashtbl.mem tbl pos then 
+  (
+    match Hashtbl.find tbl pos with 
+    | Some (ast, new_pos) -> (
+      reset tknz new_pos; 
+      Parse ast 
+    )      
+    | None -> No_parse 
+  )
+  else
+  (
+    (* We have never tried this rule at this position before, and we know that 
+       the rule is direct left recursive *)
+    (* Prime the hash table with a parse fail *)
+    Hashtbl.add tbl pos None; 
+
+    let rec _while pos' = 
+      (* Try again from the start of the recursive rule *)
+      reset tknz pos; 
+      (* Compute new result *)
+      let res = rule tknz in 
+      match res with 
+      (* If the new result is No_parse, *)
+      | No_parse -> (
+        (* was the last result a Parse? *)
+        match (Hashtbl.find tbl pos) with 
+          | Some (ast, next_pos) -> (reset tknz next_pos; Parse ast) 
+          | None -> (reset tknz pos; No_parse) 
+      )
+      | Parse x -> (
+        let new_pos = mark tknz in 
+        if new_pos <= pos' then (
+          match (Hashtbl.find tbl pos) with 
+          | Some (ast, next_pos) -> (reset tknz next_pos; Parse ast) 
+          | None -> (reset tknz pos; No_parse) 
+        )
+        else
+          (Hashtbl.replace tbl pos (Some (x, new_pos)); 
+          _while new_pos)
+      )
+    in 
+    _while pos 
+  )
+
 let nonterminal_list rule tknz = 
   let rec _inner rule tknz acc = 
     let pos = mark tknz in 

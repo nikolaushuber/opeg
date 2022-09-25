@@ -3,6 +3,7 @@ let print_grammar = ref false
 let print_firsts = ref false 
 let input_file = ref "" 
 let output_file = ref "" 
+let print_info = ref false 
 
 let get_grammar file_name : Grammar.t = 
   let ic = open_in file_name in 
@@ -24,7 +25,8 @@ let speclist =
   [
     ("-o", Arg.Set_string output_file, "Set output file name"); 
     ("--print-grammar", Arg.Set print_grammar, "Pretty print the grammar"); 
-    ("--print-firsts", Arg.Set print_firsts, "Pretty print the list of first symbols")
+    ("--print-firsts", Arg.Set print_firsts, "Pretty print the list of first symbols"); 
+    ("--print-info", Arg.Set print_info, "Pretty print info about grammar"); 
   ] 
 
 let () = 
@@ -35,5 +37,9 @@ let () =
     let cg = Grammar.Info.get_firsts grammar in  
     print_endline (Grammar.Info.pp_call_graph cg);
   ; (* <-- otherwise computation does not continue *)
+  if !print_info then 
+    let gi = Grammar.Info.get_info grammar in 
+    print_endline (Grammar.Info.pp_info gi); 
+  ; 
   if Bool.not (String.equal "" !output_file) then 
     main grammar (Filename.remove_extension !output_file)

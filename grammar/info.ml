@@ -13,8 +13,9 @@ type maybe_empty = bool
 type rule_info = 
 {
   left : left_rec;
-  empty : maybe_empty; 
 }
+
+type grammar_info = (string * rule_info) list 
 
 (* A call graph is an associative list of rule names, i.e. 
    if a grammar looks like this: 
@@ -89,5 +90,50 @@ let pp_call_graph (cg : call_graph) : string =
         name ^ " -> " ^ 
         String.concat " | " (StringSet.fold (fun s init -> s :: init ) set [])
       ) cg 
+    ) ^ 
+  "\n]"
+
+let get_info (g : t) : grammar_info = 
+  let is_alt_dlr (alt : Alternative.t) (rule : Rule.t) = 
+    let rule_name = rule.Rule.name in 
+    match alt.Alternative.symbols with 
+    | [] -> false 
+    | s :: _ -> if String.equal s.Symbol.name rule_name then true else false 
+  in 
+
+  let is_rule_dlr (r : Rule.t) = 
+    List.fold_left (fun init alt -> 
+      is_alt_dlr alt r || init 
+    ) false r.Rule.alts 
+  in
+
+  let rules = g.rules in 
+  List.map ( fun rule -> 
+    (
+      rule.Rule.name, 
+      if is_rule_dlr rule then 
+        { left = Direct } 
+      else 
+        { left = No }
+    )
+  ) rules 
+
+let pp_rule_info (ri : rule_info) : string = 
+  "{" ^ 
+  (match ri.left with 
+    | No -> "" 
+    | Direct -> "LR" 
+    | Hidden -> "Hidden LR" 
+    | Indirect -> "Indirect LR"
+  )
+  ^ "}"
+
+let pp_info (gi : grammar_info) : string = 
+  "[\n\t" ^ 
+    String.concat "\n\t" (
+      List.map (fun (name, ri) -> 
+        name ^ " -> " ^ 
+        pp_rule_info ri 
+      ) gi
     ) ^ 
   "\n]"

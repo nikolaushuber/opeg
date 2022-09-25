@@ -72,6 +72,8 @@ let gen_hash_resets (g : Grammar.t) =
   String.concat "\n\t" (List.map gen_hash_reset rules_without_start)  
 
 let gen_derivations (g : Grammar.t) = 
+  let ginfo = Grammar.Info.get_info g in 
+
   let open Token in 
   (* This links shortcuts to actual token names *)
   let tok_short_tbl = 
@@ -159,8 +161,12 @@ and " ^ r.name ^ " tknz =
   let pos = mark tknz in 
 
 " ^ String.concat "\n" (List.rev (List.mapi (fun i d -> gen_alt d (i+1) num_alt r.ty) r.alts))
-^ 
-"\n\tlookup_or_compute tknz " ^ r.name ^ "_tbl alt1" 
+^
+let rinfo = List.assoc r.name ginfo in 
+match rinfo.left with 
+| Direct -> "\n\tdirect_left_recurse tknz " ^ r.name ^ "_tbl alt1" 
+| _ ->
+  "\n\tlookup_or_compute tknz " ^ r.name ^ "_tbl alt1" 
   in 
 
   let gen_start (r : Grammar.Rule.t) (_rec : bool) = 
