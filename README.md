@@ -51,7 +51,8 @@ This will install all dependencies and create both *opeg* and *opeg_boot*.
 
 - ~~Bootstrap the grammar parser~~
 - ~~Include convenience operators like ?, +, *~~
-- Add support for left recursion 
+- ~~Add support for left recursion~~ (Direct left recursion supported)
+- Add detection and warning for other types of left recursion (or eventually support other types)
 - Evaluate performance against [menhir] 
 - Try and see if we can use OCaml's Lazy module instead of hashtables 
 - Tune initial hashtable size   
