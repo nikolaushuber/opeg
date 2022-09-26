@@ -16,6 +16,8 @@
 
 (documentation https://github.com/nikolaushuber/opeg)
 
+(version 0.1)
+
 (package
  (name opeg)
  (synopsis "PEG parser generator")
