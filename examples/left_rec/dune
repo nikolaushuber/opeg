@@ -1,11 +1,11 @@
-(library
- (name left_rec)
- (libraries opegLib))
+; (library
+;  (name left_rec)
+;  (libraries opegLib))
 
-(rule 
- (target parser.ml)
- (deps parser.peg)
- (action (run opeg %{deps} -o %{target})))
+; (rule 
+;  (target parser.ml)
+;  (deps parser.peg)
+;  (action (run opeg %{deps} -o %{target})))
 
-(ocamllex lexer)
+; (ocamllex lexer)
 

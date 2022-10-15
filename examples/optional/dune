@@ -1,5 +1,5 @@
-(library
- (name optional)
- (libraries opegLib))
+; (library
+;  (name optional)
+;  (libraries opegLib))
 
-(ocamllex lexer)
+; (ocamllex lexer)

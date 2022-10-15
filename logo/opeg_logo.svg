@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1000px" height="1000px" viewBox="0 0 1000 1000" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 59.1 (86144) - https://sketch.com -->
+    <title>nh_logo</title>
+    <desc>Created with Sketch.</desc>
+    <g id="nh_logo" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <rect id="Rectangle" fill="#373737" x="0" y="0" width="1000" height="1000" rx="231"></rect>
+        <text id="å" font-family="Courier-Bold, Courier" font-size="600" font-weight="bold" fill="#FFFFFF">
+            <tspan x="320" y="712">å</tspan>
+        </text>
+        <circle id="Oval" stroke="#FFFFFF" stroke-width="30" cx="500.5" cy="500.5" r="347.5"></circle>
+    </g>
+</svg>

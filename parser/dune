@@ -1,3 +1,7 @@
 (library 
  (name parser)
- (libraries parsetree opegLib))
+ (libraries grammar))
+
+(menhir 
+ (modules parser)
+ (flags --explain))

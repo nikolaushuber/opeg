@@ -16,23 +16,24 @@
 
 (documentation https://github.com/nikolaushuber/opeg)
 
-(version 0.1)
+(version 0.2)
 
 (package
  (name opeg)
  (synopsis "PEG parser generator")
  (description "PEG parser generator for OCaml")
- (depends ocaml dune opegLib)
+ (depends ocaml dune opegLib yojson atdgen)
  (tags
   (compiler parsing)))
 
-(package 
-  (name opeg_boot)
-  (synopsis "Bootstrapping PEG parser generator")
-  (description "This PEG parser generator is used to boostrap Opeg")
-  (depends ocaml dune menhir opegLib)
-  (tags
-    (compiler parsing)))
+; (package 
+;   (name opeg_boot)
+;   ()
+;   (synopsis "Bootstrapping PEG parser generator")
+;   (description "This PEG parser generator is used to boostrap Opeg")
+;   (depends ocaml dune menhir opegLib yojson atdgen)
+;   (tags
+;     (compiler parsing)))
 
 (package
   (name opegLib)

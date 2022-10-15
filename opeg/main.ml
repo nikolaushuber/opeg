@@ -1,22 +1,15 @@
+let version = "0.2" 
+let welcome = String.concat "\n" [
+    "Welcome to Opeg!"; 
+    "Version " ^ version ^ " running on " ^ Sys.os_type ; 
+    "For more information type \"help\""; 
+  ]
+
 let usage_msg = "opeg <file> -o <output>" 
-let print_grammar = ref false 
-let print_firsts = ref false 
+
+let print_ir = ref false 
 let input_file = ref "" 
 let output_file = ref "" 
-let print_info = ref false 
-
-let get_grammar file_name : Grammar.t = 
-  let ic = open_in file_name in 
-  let lexbuf = Lexing.from_channel ic in 
-  let pt = Parser.parse Lexer.read_token lexbuf in 
-  let grammar = Parsetree.to_grammar pt in  
-  close_in ic; 
-  grammar 
-
-let main grammar out_name = 
-  let oc = open_out (out_name ^ ".ml") in 
-  Printf.fprintf oc "%s\n\n" (Utils.string_of_grammar grammar); 
-  close_out oc 
 
 let anon_fun filename = 
   input_file := filename 
@@ -24,22 +17,30 @@ let anon_fun filename =
 let speclist = 
   [
     ("-o", Arg.Set_string output_file, "Set output file name"); 
-    ("--print-grammar", Arg.Set print_grammar, "Pretty print the grammar"); 
-    ("--print-firsts", Arg.Set print_firsts, "Pretty print the list of first symbols"); 
-    ("--print-info", Arg.Set print_info, "Pretty print info about grammar"); 
+    ("-ir", Arg.Set print_ir, "Print the grammar in JSON format"); 
   ] 
+
 
 let () = 
   Arg.parse speclist anon_fun usage_msg; 
-  let grammar = get_grammar !input_file in 
-  if !print_grammar then print_endline (Grammar.pp grammar); 
-  if !print_firsts then 
-    let cg = Grammar.Info.get_firsts grammar in  
-    print_endline (Grammar.Info.pp_call_graph cg);
-  ; (* <-- otherwise computation does not continue *)
-  if !print_info then 
-    let gi = Grammar.Info.get_info grammar in 
-    print_endline (Grammar.Info.pp_info gi); 
-  ; 
-  if Bool.not (String.equal "" !output_file) then 
-    main grammar (Filename.remove_extension !output_file)
+  (* Did we specify an input file? *)
+  match String.equal "" !input_file with 
+  (* Yes, so perform the given work *)
+  | false -> begin 
+    let ic = open_in !input_file in 
+    let lbuf = Lexing.from_channel ic in 
+    let g = Parser.start Lexer.read_token lbuf in 
+    if !print_ir then 
+      Grammar.Json.string_of_t g 
+      |> Yojson.Safe.prettify 
+      |> print_endline  
+    ; 
+    if String.equal "" !output_file then 
+      Loop.loop (Some g) 
+  end 
+  (* No, therfore start the interactive loop *)
+  | true -> begin 
+    print_endline welcome; 
+    print_endline ""; 
+    Loop.loop None  
+  end 

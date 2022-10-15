@@ -1,39 +1,28 @@
 %{
 type ast = 
     | Add of ast * ast 
-    | Sub of ast * ast 
     | Mul of ast * ast 
-    | Div of ast * ast 
     | Num of int 
 %}
 
-token:
-    | ADD "+" 
-    | SUB "-" 
-    | MUL "*" 
-    | DIV "/" 
-    | LPAREN "("  
-    | RPAREN ")" 
-    | NUMBER <int> 
-    | EOF 
-
-parser "parse" toplevel 
+description = "Grammar for simple arithmetic expressions"
+whitespace = [ "\n", "\t", " ", "\r" ]
+start = expr 
 
 %% 
 
-toplevel <ast>: 
-    / e = expr EOF { e }
+number: n = r"[1-9][0-9]+" { int_of_string n }
 
-expr <ast>: 
-    / t = term "+" e = expr { Add (t, e) }
-    / t1 = term "-" t2 = term { Sub (t1, t2) }
+%% 
+
+expr: 
+    t = term "+" e = expr { Add(t, e) }
     / t = term { t }
 
-term <ast>:
-    / a = atom "*" t = term { Mul (a, t) }
-    / a1 = atom "/" a2 = atom { Div (a1, a2) }
-    / a = atom { a } 
+term: 
+    a = atom "*" t = term { Mul(a, t) }
+    / a = atom { a }
 
-atom <ast>:
-    / n = NUMBER { Num n }
+atom: 
+    n = number { Num( n ) }
     / "(" e = expr ")" { e }
