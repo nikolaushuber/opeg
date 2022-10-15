@@ -1,5 +1,4 @@
 ![](logo/opeg_logo_small.png)
-
 # Opeg - _OCaml PEG parser generator_
 
 `Opeg` is a parser generator for Parsing Expression Grammars (PEGs). It takes a description of a grammar in PEG style and turns it into OCaml code that can then be included into any OCaml application. The parsing interface is similar to [menhir]. 
