@@ -2,4 +2,4 @@
  (public_name opeg)
  (package opeg)
  (name main)
- (libraries lexer parser grammar yojson re interpreter))
+ (libraries lexer parser grammar yojson re interpreter hw_grammar utils))

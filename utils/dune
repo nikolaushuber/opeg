@@ -1,4 +1,8 @@
-; (library
-;  (name utils)
-;  (libraries grammar))
+(library 
+ (name utils))
 
+(rule
+ (target version.ml)
+ (action 
+   (write-file  %{target} "let v = %{version:opeg}")
+ ))

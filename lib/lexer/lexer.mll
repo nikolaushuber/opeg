@@ -55,11 +55,12 @@ and read_semantic_action buf depth = parse
 
 and read_string buf = parse 
     | '"' { (Buffer.contents buf) }
-    | "\\" (['\\' '\'' '\"' 'n' 't' 'b' 'r' ' '] as c) { Buffer.add_string buf ("\\" ^ (Printf.sprintf "%c" c)); read_string buf lexbuf } 
-    | ['\\' '\'' '\n' '\r' '\t' '\"'] {
+    | '\\' (['\\' '\'' '\"' 'n' 't' 'b' 'r' ' '] as c) { Buffer.add_string buf ((Printf.sprintf "\\%c" c)); read_string buf lexbuf } 
+    (* | ['\\' '\'' '\n' '\r' '\t' '\"'] {
         raise (LexingError ("Lexer found unescaped escape character in string: " ^ Lexing.lexeme lexbuf ))
         }
-    | [^ '"' '\\' '\'' '\n' '\r' '\t' '\"']+ as lxm { Buffer.add_string buf lxm; read_string buf lexbuf }
+    | [^ '"' '\\' '\'' '\n' '\r' '\t' '\"']+ as lxm { Buffer.add_string buf lxm; read_string buf lexbuf } *)
+    | _ as c { Buffer.add_char buf c; read_string buf lexbuf }
     | eof { raise (LexingError "EOF found while reading string") }
     | _ { raise (LexingError ("Illegal string character: " ^ Lexing.lexeme lexbuf)) }
 

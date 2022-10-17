@@ -8,9 +8,13 @@
 (source
  (github nikolaushuber/opeg))
 
-(authors "Nikolaus Huber")
+(authors 
+  "Nikolaus Huber"
+)
 
-(maintainers "Nikolaus Huber")
+(maintainers 
+  "Nikolaus Huber"
+)
 
 (license MIT)
 

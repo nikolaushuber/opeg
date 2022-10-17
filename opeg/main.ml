@@ -1,7 +1,6 @@
-let version = "0.2" 
 let welcome = String.concat "\n" [
     "Welcome to Opeg!"; 
-    "Version " ^ version ^ " running on " ^ Sys.os_type ; 
+    "Version " ^ string_of_float Utils.Version.v ^ " running on " ^ Sys.os_type ; 
     "For more information type \"help\""; 
   ]
 
