@@ -1,53 +1,49 @@
 module G = Grammar 
+module P = Parsetree
 
 type pattern = 
-  | Ref of string
-  | RegEx of string * Re.re 
+  | Ref of string option * string
+  | RegEx of string option * string * Re.re
 
-type alt = {
+type choice = {
   name : string; 
   symbols : pattern list
 }
 
 type frame = {
   name : string;
-  choices : alt list;
-  mutable start : int;
-}
-
-type result_frame = {
-  frame : string; 
-  choice : string; 
-  results : string list;
+  choices : choice list;
+  start : int;
+  results : P.node list; 
+  ref : string option; 
+  curr_pos : int; 
 }
 
 type stack = frame list 
-type result_stack = result_frame list 
 
 type state = {
   str : string; 
   len : int; 
   mutable pos : int; 
   mutable stack : stack; 
-  mutable result_stack : result_stack; 
   grammar : G.t; 
   frame_tbl : (string, frame) Hashtbl.t; 
 }
 
 let make_frame_dict (g : G.t) = 
   let ws_regex = 
-    RegEx ("whitespace", (Re.Perl.compile_pat ("[" ^ String.concat "|" g.whitespace ^ "]?")))
+    RegEx (None, "#whitespace", (Re.Perl.compile_pat ("[" ^ String.concat "|" g.whitespace ^ "]?")))
   in 
 
   let pattern_to_pattern (p : G.pattern) : pattern = 
     match p.ty with 
-    | Reference (name, _) -> Ref name 
-    | Regex rx -> RegEx (rx, (Re.Perl.compile_pat rx))
-    | Quote name -> RegEx (name, (Re.compile (Re.str name)))
+    | Reference (name, _) -> Ref (p.ref, name) 
+    | Regex rx -> RegEx (p.ref, rx, (Re.Perl.compile_pat rx))
+    | Quote name -> RegEx (p.ref, name, (Re.compile (Re.str name)))
     | _ -> failwith "Pattern not yet implemented" 
   in
   
-  let choice_to_alt ?(lex = false) (c : G.choice)  : alt = 
+  let choice_to_alt ?(lex = false) (c : G.choice) = 
     let pat_list = List.map pattern_to_pattern c.patterns in 
     {
       name = c.name; 
@@ -67,6 +63,9 @@ let make_frame_dict (g : G.t) =
       name = r.name; 
       choices = List.map (choice_to_alt ~lex:lex) r.choices; 
       start = 0; 
+      results = []; 
+      ref = None; 
+      curr_pos = 0; 
     }
   in 
 
@@ -84,14 +83,16 @@ let init_interp (g : G.t) (str : string) =
     grammar = g; 
     stack = [
       {
-        name = "start";  
+        name = "#start";  
         choices = [
-          {name = "start"; symbols = [Ref g.start]}
+          {name = "#start"; symbols = [Ref (None, g.start)]}
         ];
         start = 0; 
+        results = []; 
+        ref = None; 
+        curr_pos = 0; 
       }
     ]; 
-    result_stack = []; 
     frame_tbl = make_frame_dict g; 
   }
 
@@ -107,10 +108,6 @@ let try_regex regx curr : string option =
   with 
     Not_found -> None 
 
-let del_top = function 
-  | _ :: xs -> xs 
-  | [] -> []
-     
 (* We use this for creating the stack on a failure to parse *)
 let rec backtrack (s : state) : unit =  
   let stack = s.stack in 
@@ -124,22 +121,17 @@ let rec backtrack (s : state) : unit =
       if List.length other_choices == 0 then 
         (
           s.stack <- rest; 
-          s.result_stack <- del_top s.result_stack; 
           backtrack s
         )
       else 
       (
-        s.stack <- {fr with choices = other_choices} :: rest; 
-        s.pos <- fr.start; 
-        let next_choice = List.nth other_choices 0 in 
-        match s.result_stack with 
-        | [] -> failwith "Result stack should never be empty" 
-        | curr_fr :: rest -> s.result_stack <- {curr_fr with choice = next_choice.name; results = []} :: rest 
+        (* Delete uppermost choice and reset results list *)
+        s.stack <- {fr with choices = other_choices; curr_pos = fr.start; results = []} :: rest; 
+        s.pos <- fr.start;
       )
     (* If there are no more choices, try again in the next frame *)
     | [] -> (
       s.stack <- rest; 
-      s.result_stack <- del_top s.result_stack; 
       backtrack s 
     )
   end 
@@ -155,37 +147,57 @@ let step (curr : state) : unit =
       match alt.symbols with 
       | sym :: other_syms -> begin 
         match sym with 
-          | Ref name -> begin 
+          | Ref (ref, name) -> begin 
               (* We need to create a new frame *)
-              let new_fr = Hashtbl.find curr.frame_tbl name in 
-              (* Also need to create frame on result stack *)
-              let res_fr = {
-                frame = name; 
-                choice = (List.nth new_fr.choices 0).name ; 
-                results = []; 
-              } in 
-              curr.result_stack <- res_fr :: curr.result_stack; 
-              new_fr.start <- curr.pos; 
+              let new_fr = {(Hashtbl.find curr.frame_tbl name) with start = curr.pos; curr_pos = curr.pos; ref = ref} in 
               curr.stack <- new_fr :: {fr with choices = {alt with symbols = other_syms} :: other_alts} :: other_frms 
-            end 
-          | RegEx (_, regx) -> begin  
-            match try_regex regx curr with 
-            (* Found something so continue with rest of the symbols in the current 
-               alternative 
-            *)
-            | Some res -> begin
-              curr.stack <- {fr with choices = {alt with symbols = other_syms} :: other_alts} :: other_frms; 
-              (* There must always be a frame on the result stack *)
-              match curr.result_stack with 
-              | top_fr :: rest -> curr.result_stack <- {top_fr with results = res :: top_fr.results} :: rest
-              | [] -> failwith "Result stack empty"
-            end
-            (* Found nothing, so continue with other alternative *)
-            | None -> backtrack curr
+          end 
+          | RegEx (ref, n, regx) -> begin  
+              let b_pos = curr.pos in 
+              match try_regex regx curr with 
+              (* Found something so continue with rest of the symbols in the current 
+                alternative 
+              *)
+              | Some res -> 
+                if String.equal "#whitespace" n then begin
+                curr.stack <- 
+                  {fr with 
+                    choices = {alt with symbols = other_syms } :: other_alts;
+                    curr_pos = b_pos + String.length res; 
+                  } :: other_frms
+              end else begin 
+                curr.stack <- 
+                {fr with 
+                  choices = {alt with symbols = other_syms } :: other_alts;
+                  curr_pos = b_pos + String.length res; 
+                  results = {
+                      name = fr.name; 
+                      choice = alt.name; 
+                      ref = ref; 
+                      pos = (b_pos, b_pos + String.length res); 
+                      content = Lexeme res;  
+                    } :: fr.results;
+                } :: other_frms
+              end 
+              (* Found nothing, so continue with other alternative *)
+              | None -> backtrack curr
           end
       end 
       (* There are no more symbols in the current alternative, so continue in next frame *)
-      | [] -> curr.stack <- other_frms 
+      | [] -> begin 
+        (* Every frame but the first comes from an epansion *)
+        match other_frms with 
+        | first :: rest -> 
+          (* Are there already results, if so we need to use their last position *)
+          curr.stack <- {first with results = {
+          name = fr.name; 
+          choice = alt.name; 
+          ref = fr.ref; 
+          pos = (fr.start, curr.pos);
+          content = Node (List.rev (fr.results)); 
+        } :: first.results } :: rest; 
+        | [] -> failwith "Error"
+        end
     end 
     (* No more alternatives *)
     | [] -> curr.stack <- other_frms  
@@ -193,20 +205,20 @@ let step (curr : state) : unit =
   (* No more frames *)
   | [] -> () 
 
-let rec parse (s : state) : bool = 
+let rec parse (s : state) : P.node = 
   step s; 
-  if List.length s.stack == 0 then 
-    (if s.pos == s.len then true else false)
+  if List.length s.stack == 1 then 
+    (if s.pos == s.len then (List.nth (List.hd s.stack).results 0) else raise (Failure "No parse"))
   else 
     parse s 
 
 let pp_stack (fmt : Format.formatter) (s : stack) : unit = 
   let print_pattern = function 
-    | Ref s -> "Ref( " ^ s ^ " )" 
-    | RegEx (s, _) -> "Regex( \"" ^ s ^ "\" )" 
+    | Ref (_, s) -> "Ref( " ^ s ^ " )" 
+    | RegEx (_, s, _) -> "Regex( \"" ^ s ^ "\" )" 
   in 
 
-  let print_choice (c : alt) = 
+  let print_choice (c : choice) = 
     if List.length c.symbols == 0 then "" else 
     "| -> " ^ String.concat "\n| -> " (List.map print_pattern c.symbols)
   in 
@@ -221,4 +233,3 @@ let pp_stack (fmt : Format.formatter) (s : stack) : unit =
 
   let str = String.concat "\n" (List.map print_frame s) in 
   Format.fprintf fmt "%s" str 
-    

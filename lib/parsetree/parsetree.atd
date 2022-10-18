@@ -1,0 +1,19 @@
+type pos = (int * int)
+(*  Position in file: [b_lnum, b_col, e_lnum, e_col] means the 
+    current element starts on line b_lnum at column b_col and end on line 
+    e_lnum in column e_col 
+*)
+
+type node_type = [
+      Lexeme of string
+    | Node of node list
+] <ocaml repr="classic">
+
+type node = {
+    name : string; 
+    choice : string; 
+    ref : string option; 
+    pos : pos; 
+    content : node_type; 
+}
+

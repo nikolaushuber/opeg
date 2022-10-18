@@ -1,0 +1,14 @@
+(library 
+ (name parsetree)
+ (libraries yojson atdgen-runtime)
+ (modules parsetree parsetree_t parsetree_j))
+
+(rule 
+ (targets parsetree_j.ml parsetree_j.mli)
+ (deps parsetree.atd)
+ (action (run atdgen -j -j-std %{deps})))
+
+(rule 
+ (targets parsetree_t.ml parsetree_t.mli)
+ (deps parsetree.atd)
+ (action (run atdgen -t -j-std %{deps})))

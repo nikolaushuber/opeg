@@ -43,11 +43,11 @@ let parse (args : string) : unit =
     else
       let grammar = Option.get !loaded_grammar in 
       let state = Interpreter.init_interp grammar str in 
-      let ret = Interpreter.parse state in  
-      if ret then 
+      try 
+        let _ = Interpreter.parse state in  
         out "Parsed successfully" 
-      else 
-        out "Parse failure"
+      with 
+        | Failure _ -> out "Parse failure"
   with 
     Not_found -> out_err "Argument error: parse expects a string as argument"
 
