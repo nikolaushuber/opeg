@@ -44,10 +44,11 @@ let parse (args : string) : unit =
       let grammar = Option.get !loaded_grammar in 
       let state = Interpreter.init_interp grammar str in 
       try 
-        let _ = Interpreter.parse state in  
-        out "Parsed successfully" 
+        let res = Interpreter.parse state in  
+        Parsetree.pp_ptree Format.std_formatter res; 
+        print_endline "" 
       with 
-        | Failure _ -> out "Parse failure"
+        | Failure _ -> out_err "Parse failure"
   with 
     Not_found -> out_err "Argument error: parse expects a string as argument"
 
