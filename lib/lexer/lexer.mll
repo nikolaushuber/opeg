@@ -30,6 +30,7 @@ rule read_token = parse
     | "]" { TK_RBRACK }
     | "," { TK_COMMA }
     | "%%" { TK_SEC_DIVIDE }
+    | "/*" { read_comment lexbuf }
     | "{" { read_semantic_action (Buffer.create 10) 0 lexbuf } 
     | '"' { let id = read_string (Buffer.create 10) lexbuf in TK_STRING(id) } 
     | "r\"" { let id = read_string (Buffer.create 10) lexbuf in TK_REGEX (id) }
@@ -69,3 +70,9 @@ and read_header buf = parse
     | newline { Lexing.new_line lexbuf; Buffer.add_char buf '\n'; read_header buf lexbuf }
     | _ as c { Buffer.add_char buf c; read_header buf lexbuf }
     | eof { raise (LexingError "Reached end of file inside header definition") }
+
+and read_comment = parse 
+    | "*/" { read_token lexbuf }
+    | newline { Lexing.new_line lexbuf; read_comment lexbuf } 
+    | eof { raise (LexingError "Feached end of file inside comment") }
+    | _ { read_comment lexbuf }

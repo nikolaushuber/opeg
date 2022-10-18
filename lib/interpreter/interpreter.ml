@@ -15,13 +15,21 @@ type frame = {
   mutable start : int;
 }
 
+type result_frame = {
+  frame : string; 
+  choice : string; 
+  results : string list;
+}
+
 type stack = frame list 
+type result_stack = result_frame list 
 
 type state = {
   str : string; 
   len : int; 
   mutable pos : int; 
   mutable stack : stack; 
+  mutable result_stack : result_stack; 
   grammar : G.t; 
   frame_tbl : (string, frame) Hashtbl.t; 
 }
@@ -83,6 +91,7 @@ let init_interp (g : G.t) (str : string) =
         start = 0; 
       }
     ]; 
+    result_stack = []; 
     frame_tbl = make_frame_dict g; 
   }
 
@@ -97,6 +106,10 @@ let try_regex regx curr : string option =
     end else None
   with 
     Not_found -> None 
+
+let del_top = function 
+  | _ :: xs -> xs 
+  | [] -> []
      
 (* We use this for creating the stack on a failure to parse *)
 let rec backtrack (s : state) : unit =  
@@ -109,15 +122,24 @@ let rec backtrack (s : state) : unit =
     (* Are there any choices left in the topmost frame? *)
     | _ :: other_choices ->  
       if List.length other_choices == 0 then 
-        (s.stack <- rest; backtrack s)
+        (
+          s.stack <- rest; 
+          s.result_stack <- del_top s.result_stack; 
+          backtrack s
+        )
       else 
       (
         s.stack <- {fr with choices = other_choices} :: rest; 
-        s.pos <- fr.start
+        s.pos <- fr.start; 
+        let next_choice = List.nth other_choices 0 in 
+        match s.result_stack with 
+        | [] -> failwith "Result stack should never be empty" 
+        | curr_fr :: rest -> s.result_stack <- {curr_fr with choice = next_choice.name; results = []} :: rest 
       )
     (* If there are no more choices, try again in the next frame *)
     | [] -> (
       s.stack <- rest; 
+      s.result_stack <- del_top s.result_stack; 
       backtrack s 
     )
   end 
@@ -136,6 +158,13 @@ let step (curr : state) : unit =
           | Ref name -> begin 
               (* We need to create a new frame *)
               let new_fr = Hashtbl.find curr.frame_tbl name in 
+              (* Also need to create frame on result stack *)
+              let res_fr = {
+                frame = name; 
+                choice = (List.nth new_fr.choices 0).name ; 
+                results = []; 
+              } in 
+              curr.result_stack <- res_fr :: curr.result_stack; 
               new_fr.start <- curr.pos; 
               curr.stack <- new_fr :: {fr with choices = {alt with symbols = other_syms} :: other_alts} :: other_frms 
             end 
@@ -144,7 +173,13 @@ let step (curr : state) : unit =
             (* Found something so continue with rest of the symbols in the current 
                alternative 
             *)
-            | Some _ -> curr.stack <- {fr with choices = {alt with symbols = other_syms} :: other_alts} :: other_frms 
+            | Some res -> begin
+              curr.stack <- {fr with choices = {alt with symbols = other_syms} :: other_alts} :: other_frms; 
+              (* There must always be a frame on the result stack *)
+              match curr.result_stack with 
+              | top_fr :: rest -> curr.result_stack <- {top_fr with results = res :: top_fr.results} :: rest
+              | [] -> failwith "Result stack empty"
+            end
             (* Found nothing, so continue with other alternative *)
             | None -> backtrack curr
           end
