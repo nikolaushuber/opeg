@@ -1,0 +1,13 @@
+; (executable
+;  (name server)
+;  (public_name opegServer)
+;  (package opegServer)
+;  (libraries yojson ppx_deriving_yojson.runtime)
+;  (preprocess (pps ppx_deriving_yojson)))
+
+
+(library
+ (name opegServer)
+ (public_name opegServer)
+ (libraries yojson ppx_deriving_yojson.runtime)
+ (preprocess (pps ppx_deriving_yojson)))

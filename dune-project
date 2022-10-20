@@ -30,6 +30,13 @@
  (tags
   (compiler parsing)))
 
+(package 
+  (name opegServer)
+  (synopsis "A Json-RPC server for Opeg")
+  (depends ocaml dune opeg yojson atdgen)
+  (tags 
+    (compiler parsing server rpc json)))
+
 ; (package 
 ;   (name opeg_boot)
 ;   ()
