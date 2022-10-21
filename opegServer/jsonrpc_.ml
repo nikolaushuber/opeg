@@ -1,4 +1,4 @@
-type json = Yojson.Basic.t
+(* type json = Yojson.Basic.t
 
 let jsonrpc_version = "2.0"
 
@@ -226,6 +226,9 @@ module Function = struct
     (params : (string * Params.t) list) 
     (f : 'a -> 'b) 
   : Request.t -> Response.t = 
+    ignore name; 
+    ignore params;
+    ignore f; 
     failwith "not implemented"
 
-end 
+end  *)
