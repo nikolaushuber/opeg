@@ -1,8 +1,10 @@
 (executable
  (name server)
- (public_name opegServer)
- (package opegServer)
- (libraries rpclib rpclib.json))
+ (public_name opeg_server)
+ (package opeg_server)
+ (libraries rpclib rpclib.json parser lexer interpreter parsetree)
+ (preprocess 
+  (pps ppx_deriving_rpc)))
 
 
 ; (library

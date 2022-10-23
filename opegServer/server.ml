@@ -1,46 +1,64 @@
-module MyServer (R : Idl.RPC) = struct 
+module OpegServer (R : Idl.RPC) = struct 
   open R 
   open Idl 
 
   let description = Interface.{
-    name = "Opeg"; 
+    name = "OpegServer"; 
     namespace = None; 
-    description = ["This is the opeg RPC interface"]; 
+    description = ["Json-RPC interface for the Opeg framework"]; 
     version = 1, 0, 0; 
   }
 
   let implementation = implement description 
 
-  let i = Param.mk Rpc.Types.int 
-  let e1 = Idl.DefaultError.err 
+  let grammar = Param.mk ~name:"grammar" ~description:["Input grammar"] Rpc.Types.string 
+  let input = Param.mk ~name:"input" ~description:["Input to parse"] Rpc.Types.string 
+  let parsetree = Param.mk ~name:"parsetree" ~description:["Parsetree"] Rpc.Types.string 
 
-  let add = declare "add" [] (i @-> i @-> returning i e1) 
+  type parse_error = 
+  | Grammar_error of string 
+  | Parse_error of string 
+  | Unexpected_error of string 
+  [@@deriving rpcty] 
+
+  module E = Idl.Error.Make (struct 
+    type t = parse_error
+    let t = parse_error 
+    let internal_error_of e = Some (Unexpected_error (Printexc.to_string e))
+  end)
+
+  let error = E.error 
+
+  let parse = declare "parse" [] (grammar @-> input @-> returning parsetree error)
 end 
 
-module M = Idl.IdM  
-
-module MyIdl = Idl.Make (M) 
-
-(* module Client = MyServer (MyIdl.GenClient ())  *)
-module Server = MyServer (MyIdl.GenServer ()) 
+(* Use standard id monad *)
+module OpegIdl = Idl.Make (Idl.IdM)
+module Server = OpegServer (OpegIdl.GenServer ()) 
 
 let _ = 
-  Printf.fprintf Out_channel.stdout "%s\n%!" "Server started!"; 
-  Server.add (fun a b -> MyIdl.ErrM.return (a+b)); 
+  Server.parse (fun grammar input -> 
+    let lbuf = Lexing.from_string grammar in 
+    let g = Parser.start Lexer.read_token lbuf in 
+    let state = Interpreter.init_interp g input in 
+    try 
+      let res = Interpreter.parse state in 
+      OpegIdl.ErrM.return (Parsetree.Json.string_of_node res)
+    with 
+      | Failure _ -> OpegIdl.ErrM.return_err (Server.Parse_error "Error during parsing")
+  ); 
 
-  let rpc_func = MyIdl.server Server.implementation in 
-  
+  let rpc_func = OpegIdl.server Server.implementation in 
+
   let rec loop _ = 
-    let open M in 
+    let open Idl.IdM in 
     match In_channel.input_line In_channel.stdin with 
     | None -> loop () 
-    | Some inp ->
+    | Some inp -> 
       if String.equal "" inp then loop () else 
       let _, id, call = Jsonrpc.version_id_and_call_of_string inp in 
-      Printf.printf "%s\n" (Rpc.string_of_call call); 
       rpc_func call >>= fun res -> Jsonrpc.string_of_response ~id res |> return 
-      >>= fun res -> Printf.fprintf Out_channel.stdout "%s\n%!" res;
-      loop ()
-  in 
-  loop () 
-
+      >>= fun res -> Printf.fprintf Out_channel.stdout "%s\n%!" res; 
+      loop () 
+    in 
+    loop () 
