@@ -11,9 +11,8 @@ module OpegServer (R : Idl.RPC) = struct
 
   let implementation = implement description 
 
-  let grammar = Param.mk ~name:"grammar" ~description:["Input grammar"] Rpc.Types.string 
-  let input = Param.mk ~name:"input" ~description:["Input to parse"] Rpc.Types.string 
-  let parsetree = Param.mk ~name:"parsetree" ~description:["Parsetree"] Rpc.Types.string 
+  let s = Param.mk Rpc.Types.string 
+  let i = Param.mk Rpc.Types.int 
 
   type parse_error = 
   | Grammar_error of string 
@@ -29,7 +28,8 @@ module OpegServer (R : Idl.RPC) = struct
 
   let error = E.error 
 
-  let parse = declare "parse" [] (grammar @-> input @-> returning parsetree error)
+  let parse = declare "parse" [] (s @-> s @-> returning s error)
+  let add = declare "add" [] (i @-> i @-> returning i Idl.DefaultError.err)
 end 
 
 (* Use standard id monad *)
@@ -48,17 +48,30 @@ let _ =
       | Failure _ -> OpegIdl.ErrM.return_err (Server.Parse_error "Error during parsing")
   ); 
 
+  Server.add (fun a b -> OpegIdl.ErrM.return (a + b)); 
+
   let rpc_func = OpegIdl.server Server.implementation in 
+
+  (* Let the magic start here *)
+  let socket_str = "tcp://*:5555" in 
+  let context = Zmq.Context.create () in 
+  let socket = Zmq.Socket.create context Zmq.Socket.rep in 
+  Zmq.Socket.bind socket socket_str;
+  print_endline ("Opeg Server started @ " ^ socket_str);  
 
   let rec loop _ = 
     let open Idl.IdM in 
-    match In_channel.input_line In_channel.stdin with 
-    | None -> loop () 
-    | Some inp -> 
-      if String.equal "" inp then loop () else 
-      let _, id, call = Jsonrpc.version_id_and_call_of_string inp in 
-      rpc_func call >>= fun res -> Jsonrpc.string_of_response ~id res |> return 
-      >>= fun res -> Printf.fprintf Out_channel.stdout "%s\n%!" res; 
-      loop () 
-    in 
+    (* Still fascinated that that works *)
+    let inp = Zmq.Socket.recv socket in 
+    print_endline ("Received: " ^ inp); 
+    let _, id, call = Jsonrpc.version_id_and_call_of_string inp in 
+    rpc_func call >>= fun res -> 
+      let res_str = Jsonrpc.string_of_response ~id res in 
+      print_endline ("Send: " ^ res_str); 
+      res_str |> return 
+    (* Look, some more magic *)
+    >>= fun res -> Zmq.Socket.send socket res; 
     loop () 
+  in 
+  loop () 
+ 

@@ -15,6 +15,8 @@ depends: [
   "opeg"
   "yojson"
   "atdgen"
+  "ppx_deriving_rpc"
+  "zmq"
   "odoc" {with-doc}
 ]
 build: [

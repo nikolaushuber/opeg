@@ -2,7 +2,7 @@
  (name server)
  (public_name opeg_server)
  (package opeg_server)
- (libraries rpclib rpclib.json parser lexer interpreter parsetree)
+ (libraries rpclib rpclib.json parser lexer interpreter parsetree zmq)
  (preprocess 
   (pps ppx_deriving_rpc)))
 

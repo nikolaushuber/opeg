@@ -33,7 +33,7 @@
 (package 
   (name opeg_server)
   (synopsis "A Json-RPC server for Opeg")
-  (depends ocaml dune opeg yojson atdgen)
+  (depends ocaml dune opeg yojson atdgen ppx_deriving_rpc zmq)
   (tags 
     (compiler parsing server rpc json)))
 
