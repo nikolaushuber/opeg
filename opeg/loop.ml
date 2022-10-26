@@ -1,3 +1,5 @@
+open Lib
+
 let help_msg = String.concat "\n" [
     "Available commands:"; 
     "  load <file>   -> loads a grammar";

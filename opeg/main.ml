@@ -1,3 +1,5 @@
+open Lib 
+
 let version = "0.1" 
 
 let welcome = String.concat "\n" [

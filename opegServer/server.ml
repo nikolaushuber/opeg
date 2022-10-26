@@ -1,3 +1,5 @@
+open Lib
+
 module OpegServer (R : Idl.RPC) = struct 
   open R 
   open Idl 

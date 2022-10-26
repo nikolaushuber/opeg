@@ -1,0 +1,9 @@
+; Include all subdirectories as if the files in them were in the main folder
+(include_subdirs unqualified)
+
+; We just declare one library here so that the generic names of modules like 
+; Parser, Lexer, Parsetree, etc. are not clashing with the modules of the 
+; OCaml standard library, i.e. we use Lib.Parser, Lib.Lexer, etc. 
+(library 
+ (name lib)
+ (libraries re yojson atdgen-runtime))

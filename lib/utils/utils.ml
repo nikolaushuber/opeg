@@ -1,4 +1,4 @@
-open Grammar 
+(* open Grammar 
 
 let gen_header (g : Grammar.t) = 
   (if 
@@ -204,4 +204,4 @@ let string_of_grammar (grammar : Grammar.t) =
   (gen_expect_functions grammar) ^
   (gen_hash_tables grammar) ^
   (gen_derivations grammar) ^
-  (gen_toplevel_fun grammar) 
+  (gen_toplevel_fun grammar)  *)

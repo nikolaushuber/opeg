@@ -1,7 +1,7 @@
-(library 
- (name parsetree)
- (libraries yojson atdgen-runtime)
- (modules parsetree parsetree_t parsetree_j))
+; (library 
+;  (name opeg_parsetree)
+;  (libraries yojson atdgen-runtime)
+;  (modules opeg_parsetree parsetree_t parsetree_j))
 
 (rule 
  (targets parsetree_j.ml parsetree_j.mli)

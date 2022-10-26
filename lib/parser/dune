@@ -1,6 +1,6 @@
-(library 
- (name parser)
- (libraries grammar))
+; (library 
+;  (name parser)
+;  (libraries grammar))
 
 (menhir 
  (modules parser)
