@@ -3,15 +3,15 @@
 ;  (libraries yojson atdgen-runtime)
 ;  (modules grammar grammar_t grammar_j))
 
-(rule 
- (targets grammar_j.ml grammar_j.mli)
- (deps grammar.atd)
- (action (run atdgen -j -j-std %{deps})))
+; (rule 
+;  (targets grammar_j.ml grammar_j.mli)
+;  (deps grammar.atd)
+;  (action (run atdgen -j -j-std %{deps})))
 
-(rule 
- (targets grammar_t.ml grammar_t.mli)
- (deps grammar.atd)
- (action (run atdgen -t -j-std %{deps})))
+; (rule 
+;  (targets grammar_t.ml grammar_t.mli)
+;  (deps grammar.atd)
+;  (action (run atdgen -t -j-std %{deps})))
 
 ; (library 
 ;  (name new_grammar)

@@ -15,9 +15,6 @@ let identifier = (alpha | '_') (alphanumeric | '_')*
 let newline = ('\013'* '\010')
 
 rule read_token = parse 
-    | "description" { TK_DESCRIPTION }
-    | "whitespace" { TK_WHITESPACE }
-    | "start" { TK_START }
     | "%{" { read_header (Buffer.create 10) lexbuf }
 
     | ":" { TK_COLON }
@@ -26,15 +23,13 @@ rule read_token = parse
     | "?" { TK_OPTION }
     | "+" { TK_PLUS }
     | "*" { TK_STAR }
-    | "[" { TK_LBRACK }
-    | "]" { TK_RBRACK }
-    | "," { TK_COMMA }
-    | "%%" { TK_SEC_DIVIDE }
+    | "&" { TK_AND }
+    | "!" { TK_NOT }
     | "/*" { read_comment lexbuf }
     | "{" { read_semantic_action (Buffer.create 10) 0 lexbuf } 
     | '"' { let id = read_string (Buffer.create 10) lexbuf in TK_STRING(id) } 
     | "r\"" { let id = read_string (Buffer.create 10) lexbuf in TK_REGEX (id) }
-    | identifier as id { TK_NAME (id) }
+    | identifier as id { TK_IDENTIFIER (id) }
     | whitespace { read_token lexbuf }
     | newline { Lexing.new_line lexbuf; read_token lexbuf }
     | eof { TK_EOF }

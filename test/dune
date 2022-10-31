@@ -1,2 +1,7 @@
-; (test
-;  (name opeg))
+(tests
+  (names 
+   simple_arith
+  )
+  (libraries
+    alcotest
+    lib))

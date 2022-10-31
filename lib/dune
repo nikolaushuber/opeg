@@ -6,4 +6,6 @@
 ; OCaml standard library, i.e. we use Lib.Parser, Lib.Lexer, etc. 
 (library 
  (name lib)
- (libraries re yojson atdgen-runtime))
+ (libraries re yojson atdgen-runtime)
+ (preprocess 
+  (pps ppx_yojson_conv)))

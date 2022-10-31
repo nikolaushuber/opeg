@@ -41,11 +41,10 @@ module Server = OpegServer (OpegIdl.GenServer ())
 let _ = 
   Server.parse (fun grammar input -> 
     let lbuf = Lexing.from_string grammar in 
-    let g = Parser.start Lexer.read_token lbuf in 
-    let state = Interpreter.init_interp g input in 
+    let g = Parser.parse Lexer.read_token lbuf in 
     try 
-      let res = Interpreter.parse state in 
-      OpegIdl.ErrM.return (Parsetree.Json.string_of_node res)
+      let res = Interpreter.interpret g input in 
+      OpegIdl.ErrM.return (Parsetree.Json.string_of_t res)
     with 
       | Failure _ -> OpegIdl.ErrM.return_err (Server.Parse_error "Error during parsing")
   ); 

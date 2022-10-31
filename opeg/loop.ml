@@ -28,7 +28,7 @@ let load (args : string) : unit =
       try 
         let ic = open_in path in 
         let lbuf = Lexing.from_channel ic in 
-        loaded_grammar := Some (Parser.start Lexer.read_token lbuf) 
+        loaded_grammar := Some (Parser.parse Lexer.read_token lbuf) 
       with 
         | Sys_error _ -> out_err ("Cannot find file " ^ path)
     end 
@@ -44,9 +44,8 @@ let parse (args : string) : unit =
       out_err "No grammar loaded" 
     else
       let grammar = Option.get !loaded_grammar in 
-      let state = Interpreter.init_interp grammar str in 
       try 
-        let res = Interpreter.parse state in  
+        let res = Interpreter.interpret grammar str in  
         Parsetree.pp_ptree Format.std_formatter res; 
         print_endline "" 
       with 
@@ -56,15 +55,6 @@ let parse (args : string) : unit =
 
 let close (_ : string) : unit = exit 0 
 
-let json (_ : string) : unit = 
-  if Option.is_none !loaded_grammar then 
-    out_err "No grammar loaded" 
-  else
-    let grammar = Option.get !loaded_grammar in 
-    Grammar.Json.string_of_t grammar 
-    |> Yojson.Safe.prettify 
-    |> out  
-
 let clear (_: string) : unit = 
   let _ = Sys.command "clear" in 
   ()
@@ -72,8 +62,7 @@ let clear (_: string) : unit =
 let rec cmds : cmd_descr list = [
   ("load", ("load <file>", "loads a grammar from <file>", load));
   ("parse", ("parse \"...\"", "parses the given string", parse)); 
-  ("close", ("close", "closes the interpreter", close)); 
-  ("json", ("json", "prints out json representation of loaded grammar", json)); 
+  ("close", ("close", "closes the interpreter", close));  
   ("help", ("help", "prints this help message", help)); 
   ("clear", ("clear", "clears the screen", clear));
 ]
