@@ -49,7 +49,7 @@ let parse (args : string) : unit =
         Parsetree.pp_ptree Format.std_formatter res; 
         print_endline "" 
       with 
-        | Failure _ -> out_err "Parse failure"
+        | Interpreter.No_parse -> out_err "Parse failure"
   with 
     Not_found -> out_err "Argument error: parse expects a string as argument"
 
