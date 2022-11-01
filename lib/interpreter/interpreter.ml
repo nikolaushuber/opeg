@@ -9,10 +9,11 @@ let interpret (g : G.t) (inp : string) : P.t =
   | [] -> failwith "No parse" 
   | _ -> begin
     let (_, start) = List.hd g.rules in 
-    match G.Rule.eval inp g start 0 with 
-    | No_parse -> raise No_parse
-    | Parse (next, tree) -> 
-      if Int.equal next (String.length inp) then tree
+    let state = G.State.make inp g in 
+    match G.Rule.eval state start with 
+    | (_, No_parse) -> raise No_parse
+    | (next, Parse tree) -> 
+      if Int.equal next.pos (String.length inp) then tree
       else raise No_parse
   end
 
