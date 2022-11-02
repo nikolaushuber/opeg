@@ -25,12 +25,6 @@ let pp_ptree (fmt : Format.formatter) (n : node) : unit =
 
   Format.fprintf fmt "%s" (_inner 0 n)  *)
 
-let mk ?(name = None) (pos : pos) (node : node) = {
-  name = name; 
-  pos = pos; 
-  node = node; 
-}
-
 let rec to_string (p : t) : string = 
   match p.node with 
   | Lexeme s -> s 

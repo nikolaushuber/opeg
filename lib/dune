@@ -8,4 +8,5 @@
  (name lib)
  (libraries re yojson atdgen-runtime)
  (preprocess 
-  (pps ppx_yojson_conv)))
+  (pps ppx_import ppx_yojson_conv))
+)

@@ -4,10 +4,22 @@ module rec Parse_result : sig
   type t =
     | Parse of P.t
     | No_parse
+
+  val return : ?name:string option -> State.t -> P.pos -> P.node -> t
 end = struct
   type t =
     | Parse of P.t
     | No_parse
+
+  let return ?(name = None) (next : State.t) pos node : t = 
+    let (_, rule, choice) = List.hd next.stack in 
+    Parse {
+      name = name; 
+      pos = pos; 
+      node = node; 
+      rule = rule; 
+      choice = choice; 
+    }
 end
 
 and Parse_expr : sig 
@@ -32,7 +44,7 @@ end = struct
     (* TODO: Use hashtbl instead *)
     | Reference r -> begin match List.assoc_opt r state.grammar.rules with 
       | Some rule -> 
-        Rule.eval state rule  
+        Rule.eval {state with stack = (state.pos, r, 0) :: state.stack} rule  
       | None -> failwith "Holes in grammar not yet supported" 
   end
 end
@@ -61,18 +73,18 @@ end = struct
   let eval state rep : State.t * Parse_result.t = match rep with 
     | Zero_or_one p -> begin 
       match Parse_expr.eval state p with 
-      | (next, Parse tree) -> (next, Parse (P.mk tree.pos (Option (Some tree))))
-      | (next, No_parse) -> (next, Parse (P.mk (next.translate (next.pos, next.pos)) (Option None)))
+      | (next, Parse tree) -> (next, Parse_result.return next tree.pos (Option (Some tree)))
+      | (next, No_parse) -> (next, Parse_result.return next (next.translate (next.pos, next.pos)) (Option None))
     end
     | Zero_or_more p -> 
       begin match receval state p with
-        | (next, []) -> (next, Parse (P.mk (state.translate (next.pos, next.pos)) (List [])))
-        | (next, res) -> (next, Parse (P.mk (state.translate (state.pos, next.pos)) (List res)))
+        | (next, []) -> (next, Parse_result.return next (state.translate (next.pos, next.pos)) (List []))
+        | (next, res) -> (next, Parse_result.return next (state.translate (state.pos, next.pos)) (List res))
       end 
     | One_or_more p -> 
       begin match receval state p with 
         | (next, []) -> (next, No_parse)
-        | (next, res) -> (next, Parse (P.mk (state.translate (state.pos, next.pos)) (List res)))
+        | (next, res) -> (next, Parse_result.return next (state.translate (state.pos, next.pos)) (List res))
       end
 end 
 
@@ -96,7 +108,7 @@ end = struct
     | Not p' ->  
       begin match Parse_expr.eval state p' with 
       | (_, Parse _) -> (state, No_parse)
-      | (_, No_parse) -> (state, Parse (P.mk (state.translate (state.pos, state.pos)) (Option None)))
+      | (_, No_parse) -> (state, Parse_result.return state (state.translate (state.pos, state.pos)) (Option None))
       end 
 end
 
@@ -119,7 +131,7 @@ end = struct
           let len = String.length q in 
           let next_pos = state.pos + len in 
           let next = {state with pos = next_pos} in 
-          (next, Parse (P.mk (state.translate (state.pos, next_pos)) (Lexeme q)))
+          (next, Parse_result.return next (state.translate (state.pos, next_pos)) (Lexeme q))
         else 
           (state, No_parse)
       with
@@ -134,7 +146,7 @@ end = struct
         if Int.equal start state.pos then 
           let next = {state with pos = len} in 
           let res = Re.Group.get ret 0 in 
-          (next, Parse (P.mk (state.translate (state.pos, len)) (Lexeme res)))
+          (next, Parse_result.return next (state.translate (state.pos, len)) (Lexeme res))
         else 
           (state, No_parse)
       with
@@ -157,7 +169,7 @@ end = struct
 
   let eval (state : State.t) c = 
     let rec inner syms state' acc : State.t * Parse_result.t = match syms with 
-      | [] -> (state', Parse (P.mk (state.translate (state.pos, state'.pos)) (List (List.rev acc))))
+      | [] -> (state', Parse_result.return state' (state.translate (state.pos, state'.pos)) (List (List.rev acc)))
       | (name, p) :: xs -> 
         begin match Parse_expr.eval state' p with 
         | (next, No_parse) -> (next, No_parse) 
@@ -178,7 +190,9 @@ end = struct
     | [] -> (state, No_parse) 
     | c :: cs -> begin match Choice.eval state c with 
       | (_, Parse _) as p -> p 
-      | (_, No_parse) -> eval state cs 
+      | (_, No_parse) -> 
+        let (pos, rule, choice) = List.hd state.stack in 
+        eval {state with stack = (pos, rule, choice+1) :: state.stack} cs 
     end
 end 
 
@@ -201,8 +215,11 @@ and State : sig
     pos : int; 
     grammar : Gramm_.t; 
     translate : (int * int) -> (int * int * int * int); 
+    memo : ((int * string), (int * P.t)) Hashtbl.t; 
+    stack : (int * string * int) list; 
   }
 
+  val delta : t -> t -> (int * int * int * int)
   val make : string -> Gramm_.t -> t 
 end = struct 
   type t = {
@@ -210,13 +227,19 @@ end = struct
     pos : int; 
     grammar : Gramm_.t; 
     translate : (int * int) -> (int * int * int * int); 
+    memo : ((int * string), (int * P.t)) Hashtbl.t;
+    stack : (int * string * int) list; 
   }
+
+  let delta state1 state2 = state1.translate (state1.pos, state2.pos)
 
   let rec make inp g = {
     input = inp;
-    pos = 0; 
+    pos = 0;
     grammar = g;
-    translate = f_translate_pos inp; 
+    translate = f_translate_pos inp;
+    memo = Hashtbl.create 10;
+    stack = [0, fst (List.hd g.rules), 0];
   }
 
   and f_translate_pos (str : string) = 
@@ -248,35 +271,24 @@ end
 
 include Gramm_
 
-module StringSet = Set.Make (String) 
-
-let find_all_refs (rs : Rule.t list) : StringSet.t = 
-  let refs_in_p_exprs set = function 
-    | Parse_expr.Reference s -> StringSet.add s set 
-    | _ -> set 
-  in 
-
-  let refs_in_choice set Choice.{ symbols = symbs; _ } = 
-    let (_, p_exprs) = List.split symbs in 
-    List.fold_left refs_in_p_exprs set p_exprs 
-  in 
-
-  let refs_in_rule set rl = 
-    List.fold_left refs_in_choice set rl 
-  in 
-
-  List.fold_left refs_in_rule StringSet.empty rs 
-
 let is_closed (g : t) : bool = 
+  let module StringSet = Set.Make (String) in 
+  let find_all_refs (rs : Rule.t list) : StringSet.t = 
+    let refs_in_p_exprs set = function 
+      | Parse_expr.Reference s -> StringSet.add s set 
+      | _ -> set 
+    in 
+    let refs_in_choice set Choice.{ symbols = symbs; _ } = 
+      let (_, p_exprs) = List.split symbs in 
+      List.fold_left refs_in_p_exprs set p_exprs 
+    in 
+    let refs_in_rule set rl = 
+      List.fold_left refs_in_choice set rl 
+    in 
+    List.fold_left refs_in_rule StringSet.empty rs 
+  in 
   let (names, rules) = List.split g.rules in 
   let name_set = StringSet.of_list names in 
   let rule_set = find_all_refs rules in 
   let diff = StringSet.diff rule_set name_set in 
   StringSet.is_empty diff
-
-type range = int * int 
-
-
-
-
-

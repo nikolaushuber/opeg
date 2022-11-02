@@ -13,6 +13,8 @@ type node = [
 
 type t = {
   name : string option; 
+  rule : string; 
+  choice : int; 
   pos : pos; 
   node : node; 
 }
