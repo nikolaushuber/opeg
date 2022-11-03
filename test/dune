@@ -1,7 +1,6 @@
-(tests
-  (names 
-   simple_arith
-  )
-  (libraries
-    alcotest
-    lib))
+(library 
+  (name test)
+  (libraries lib)
+  (preprocess 
+    (pps ppx_inline_test ppx_expect))
+  (inline_tests))
