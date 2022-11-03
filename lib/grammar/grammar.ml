@@ -1,5 +1,10 @@
 module P = Parsetree 
 
+let print_stack (stack : (int * string * int) list) : unit = 
+  let list = List.map (fun (pos,s,c) -> "(" ^ string_of_int pos ^ "," ^ s ^ "," ^ string_of_int c ^ ")") stack in 
+  let str = String.concat " -> " (List.rev list) in 
+  print_endline str
+
 module rec Parse_result : sig 
   type t =
     | Parse of P.t
@@ -11,8 +16,8 @@ end = struct
     | Parse of P.t
     | No_parse
 
-  let return ?(name = None) (next : State.t) pos node : t = 
-    let (_, rule, choice) = List.hd next.stack in 
+  let return ?(name = None) (state : State.t) pos node : t = 
+    let (_, rule, choice) = List.hd state.stack in 
     Parse {
       name = name; 
       pos = pos; 
@@ -37,14 +42,15 @@ end = struct
     | Repetition of Repetition_expr.t 
     | Reference of string 
 
-  let eval state p : State.t * Parse_result.t = match p with 
+  let eval (state : State.t) p : State.t * Parse_result.t = match p with 
     | Match m -> Match_expr.eval state m
     | Predicate pred -> Predicate_expr.eval state pred
     | Repetition rep -> Repetition_expr.eval state rep
     (* TODO: Use hashtbl instead *)
     | Reference r -> begin match List.assoc_opt r state.grammar.rules with 
       | Some rule -> 
-        Rule.eval {state with stack = (state.pos, r, 0) :: state.stack} rule  
+        let new_state = {state with stack = (state.pos, r, 0) :: state.stack} in 
+         Rule.eval new_state rule 
       | None -> failwith "Holes in grammar not yet supported" 
   end
 end
@@ -74,17 +80,17 @@ end = struct
     | Zero_or_one p -> begin 
       match Parse_expr.eval state p with 
       | (next, Parse tree) -> (next, Parse_result.return next tree.pos (Option (Some tree)))
-      | (next, No_parse) -> (next, Parse_result.return next (next.translate (next.pos, next.pos)) (Option None))
+      | (next, No_parse) -> (next, Parse_result.return next (next.pos, next.pos) (Option None))
     end
     | Zero_or_more p -> 
       begin match receval state p with
-        | (next, []) -> (next, Parse_result.return next (state.translate (next.pos, next.pos)) (List []))
-        | (next, res) -> (next, Parse_result.return next (state.translate (state.pos, next.pos)) (List res))
+        | (next, []) -> (next, Parse_result.return next (next.pos, next.pos) (Tree []))
+        | (next, res) -> (next, Parse_result.return next (state.pos, next.pos) (Tree res))
       end 
     | One_or_more p -> 
       begin match receval state p with 
         | (next, []) -> (next, No_parse)
-        | (next, res) -> (next, Parse_result.return next (state.translate (state.pos, next.pos)) (List res))
+        | (next, res) -> (next, Parse_result.return next (state.pos, next.pos) (Tree res))
       end
 end 
 
@@ -108,7 +114,7 @@ end = struct
     | Not p' ->  
       begin match Parse_expr.eval state p' with 
       | (_, Parse _) -> (state, No_parse)
-      | (_, No_parse) -> (state, Parse_result.return state (state.translate (state.pos, state.pos)) (Option None))
+      | (_, No_parse) -> (state, Parse_result.return state (state.pos, state.pos) (Option None))
       end 
 end
 
@@ -131,7 +137,7 @@ end = struct
           let len = String.length q in 
           let next_pos = state.pos + len in 
           let next = {state with pos = next_pos} in 
-          (next, Parse_result.return next (state.translate (state.pos, next_pos)) (Lexeme q))
+          (next, Parse_result.return next (state.pos, next_pos) (Lexeme q))
         else 
           (state, No_parse)
       with
@@ -146,7 +152,7 @@ end = struct
         if Int.equal start state.pos then 
           let next = {state with pos = len} in 
           let res = Re.Group.get ret 0 in 
-          (next, Parse_result.return next (state.translate (state.pos, len)) (Lexeme res))
+          (next, Parse_result.return next (state.pos, len) (Lexeme res))
         else 
           (state, No_parse)
       with
@@ -169,11 +175,11 @@ end = struct
 
   let eval (state : State.t) c = 
     let rec inner syms state' acc : State.t * Parse_result.t = match syms with 
-      | [] -> (state', Parse_result.return state' (state.translate (state.pos, state'.pos)) (List (List.rev acc)))
+      | [] -> (state', Parse_result.return state (state.pos, state'.pos) (Tree (List.rev acc)))
       | (name, p) :: xs -> 
         begin match Parse_expr.eval state' p with 
-        | (next, No_parse) -> (next, No_parse) 
-        | (next, Parse tree) -> inner xs next ({tree with name = name} :: acc)
+        | (next, No_parse) -> (next, No_parse)    (* => next state is irrelevant *)
+        | (next, Parse tree) -> inner xs {next with stack = state'.stack} ({tree with name = name} :: acc)
         end
     in 
     inner c.symbols state []
@@ -192,7 +198,7 @@ end = struct
       | (_, Parse _) as p -> p 
       | (_, No_parse) -> 
         let (pos, rule, choice) = List.hd state.stack in 
-        eval {state with stack = (pos, rule, choice+1) :: state.stack} cs 
+        eval {state with stack = (pos, rule, choice+1) :: List.tl state.stack} cs 
     end
 end 
 
@@ -214,34 +220,31 @@ and State : sig
     input : string; 
     pos : int; 
     grammar : Gramm_.t; 
-    translate : (int * int) -> (int * int * int * int); 
     memo : ((int * string), (int * P.t)) Hashtbl.t; 
     stack : (int * string * int) list; 
   }
 
-  val delta : t -> t -> (int * int * int * int)
+  val delta : t -> t -> (int * int)
   val make : string -> Gramm_.t -> t 
 end = struct 
   type t = {
     input : string; 
     pos : int; 
     grammar : Gramm_.t; 
-    translate : (int * int) -> (int * int * int * int); 
     memo : ((int * string), (int * P.t)) Hashtbl.t;
     stack : (int * string * int) list; 
   }
 
-  let delta state1 state2 = state1.translate (state1.pos, state2.pos)
+  let delta state1 state2 = (state1.pos, state2.pos)
 
-  let rec make inp g = {
+  let make inp g = {
     input = inp;
     pos = 0;
     grammar = g;
-    translate = f_translate_pos inp;
     memo = Hashtbl.create 10;
     stack = [0, fst (List.hd g.rules), 0];
   }
-
+(* 
   and f_translate_pos (str : string) = 
     let lst = String.split_on_char '\n' str in 
     let lst = List.map String.length lst in 
@@ -266,7 +269,7 @@ end = struct
       in
       let (l1, c1) = _inner pos1 lst 0 in 
       let (l2, c2) = _inner pos2 lst 0 in 
-      (l1, c1, l2, c2)
+      (l1, c1, l2, c2) *)
 end 
 
 include Gramm_

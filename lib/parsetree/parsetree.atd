@@ -3,12 +3,12 @@
     e_lnum in column e_col. All indices are starting at 0. 
 *)
 
-type pos = (int * int * int * int)
+type pos = (int * int)
 
 type node = [
   | Lexeme of string 
   | Option of t option 
-  | List of t list 
+  | Tree of t list 
 ] <ocaml repr="classic">
 
 type t = {
