@@ -328,3 +328,10 @@ let%test _ = expect_no_parse "(1+2"
 let%test _ = expect_no_parse "1/2" 
 let%test _ = expect_no_parse "1.2"
 let%test _ = expect_no_parse "1+2.0"
+
+let expect_not_closed grammar = Bool.not (Lib.Grammar.is_closed grammar)
+let expect_closed grammar = Lib.Grammar.is_closed grammar 
+
+let%test _ = expect_not_closed Test_grammars.fragment1 
+let%test _ = expect_not_closed Test_grammars.fragment2 
+let%test _ = expect_closed (Lib.Grammar.(++) Test_grammars.fragment1 Test_grammars.fragment2)

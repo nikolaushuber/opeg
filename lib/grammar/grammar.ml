@@ -208,11 +208,31 @@ and Gramm_ : sig
     rules : (string * Rule.t) list; 
     header : string option; 
   }
+
+  val (++) : t -> t -> t 
 end = struct 
   type t = {
     rules : (string * Rule.t) list; 
     header : string option; 
   }
+
+  let add_rule (list : (string * Rule.t) list) (rule : (string * Rule.t)) = 
+    let (name, r) = rule in 
+    match List.assoc_opt name list with 
+    | Some r' -> (name, r' @ r) :: (List.remove_assoc name list)
+    | None -> rule :: list
+    
+  let (++) g1 g2 : t = 
+    let hd = match g1.header, g2.header with 
+      | Some h1, Some h2 -> Some (h1 ^ "\n" ^ h2) 
+      | None, Some h2 -> Some h2 
+      | Some h1, None -> Some h1 
+      | None, None -> None 
+    in  
+    {
+      header = hd; 
+      rules = List.fold_left add_rule g1.rules g2.rules; 
+    }
 end 
 
 and State : sig 

@@ -1,0 +1,9 @@
+%{
+
+%}
+
+atom: 
+      n = number { Num( n ) }
+    / "(" e = expr ")" { e }
+  
+number: n = r"[1-9][0-9]*" { int_of_string n }

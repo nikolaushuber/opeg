@@ -1,0 +1,14 @@
+%{
+type ast = 
+    | Add of ast * ast 
+    | Mul of ast * ast 
+    | Num of int 
+%}
+
+expr: 
+      t = term "+" e = expr { Add(t, e) }
+    / t = term { t }
+
+term: 
+      a = atom "*" t = term { Mul(a, t) }
+    / a = atom { a }
