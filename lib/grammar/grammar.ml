@@ -230,7 +230,7 @@ end = struct
     let (name, r) = rule in 
     match List.assoc_opt name list with 
     | Some r' -> (name, r' @ r) :: (List.remove_assoc name list)
-    | None -> rule :: list
+    | None ->  list @ [rule]
     
   let (++) g1 g2 : t = 
     let hd = match g1.header, g2.header with 
