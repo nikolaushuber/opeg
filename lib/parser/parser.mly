@@ -17,23 +17,35 @@
 %token TK_PLUS "+" 
 %token TK_STAR "*" 
 %token TK_EOF "eof" 
+%token TK_GRAMMAR "grammar" 
+%token TK_DEF_START "<{"
+%token TK_DEF_END "}>"
 
 %nonassoc "?"
-%nonassoc "+"
+%left "+"
 %nonassoc "*"
 %nonassoc "!"
 %nonassoc "&"
 
-%start <Grammar.t> parse 
+%start <(string * Grammar.t) list> parse 
 
 %% 
 
-parse: 
-    | hd = TK_HEADER? rules = rule* "eof" 
+parse: gl = grammar_def* "eof" { gl }
+
+grammar_def: 
+    | "grammar" name = TK_IDENTIFIER "=" "<{" g = grammar "}>" { (name, g) }
+    | "grammar" name = TK_IDENTIFIER "=" l = separated_list("+", TK_IDENTIFIER) { 
+            (name, {Grammar.empty with parts = l}) 
+    }
+
+grammar: 
+    | hd = TK_HEADER? rules = rule* 
     {
         Grammar.{
             rules = rules; 
             header = hd; 
+            parts = [];
         }
     }
 

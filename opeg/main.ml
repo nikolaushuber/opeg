@@ -27,9 +27,7 @@ let () =
   match String.equal "" !input_file with 
   (* Yes, so perform the given work *)
   | false -> begin 
-    let ic = open_in !input_file in 
-    let lbuf = Lexing.from_channel ic in 
-    let g = Parser.parse Lexer.read_token lbuf in 
+    let g = Grammar_utils.file_to_grammar !input_file in 
     ignore g; 
     if String.equal "" !output_file then 
       Loop.loop (Some g) 

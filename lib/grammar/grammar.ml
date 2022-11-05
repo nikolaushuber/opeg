@@ -207,13 +207,23 @@ and Gramm_ : sig
   type t = {
     rules : (string * Rule.t) list; 
     header : string option; 
+    parts : string list; 
   }
+
+  val empty : t
 
   val (++) : t -> t -> t 
 end = struct 
   type t = {
     rules : (string * Rule.t) list; 
     header : string option; 
+    parts : string list; 
+  }
+
+  let empty = {
+    rules = []; 
+    header = None; 
+    parts = []
   }
 
   let add_rule (list : (string * Rule.t) list) (rule : (string * Rule.t)) = 
@@ -232,6 +242,7 @@ end = struct
     {
       header = hd; 
       rules = List.fold_left add_rule g1.rules g2.rules; 
+      parts = g1.parts @ g2.parts; 
     }
 end 
 

@@ -26,9 +26,7 @@ let load (args : string) : unit =
     let path = Re.Group.get (Re.exec extract_filename_regex args) 1 in 
     begin
       try 
-        let ic = open_in path in 
-        let lbuf = Lexing.from_channel ic in 
-        loaded_grammar := Some (Parser.parse Lexer.read_token lbuf) 
+        loaded_grammar := Some (Grammar_utils.file_to_grammar path) 
       with 
         | Sys_error _ -> out_err ("Cannot find file " ^ path)
     end 

@@ -15,6 +15,14 @@ module OpegServer (R : Idl.RPC) = struct
 
   let s = Param.mk Rpc.Types.string 
   let i = Param.mk Rpc.Types.int 
+  
+  type grammar_item = (string * bool * bool)
+  [@@deriving rpcty]
+
+  type grammar_item_list = grammar_item list 
+  [@@deriving rpcty]
+
+  let grammar_list_p = Param.mk grammar_item_list
 
   type parse_error = 
   | Grammar_error of string 
@@ -32,6 +40,7 @@ module OpegServer (R : Idl.RPC) = struct
 
   let parse = declare "parse" [] (s @-> s @-> returning s error)
   let add = declare "add" [] (i @-> i @-> returning i Idl.DefaultError.err)
+  let get_grammar_list = declare "get_grammar_list" [] (s @-> returning grammar_list_p Idl.DefaultError.err)
 end 
 
 (* Use standard id monad *)
@@ -39,15 +48,20 @@ module OpegIdl = Idl.Make (Idl.IdM)
 module Server = OpegServer (OpegIdl.GenServer ()) 
 
 let _ = 
-  Server.parse (fun grammar input -> 
-    let lbuf = Lexing.from_string grammar in 
-    let g = Parser.parse Lexer.read_token lbuf in 
+  Server.parse (fun grammar_str input -> 
+    let g = Grammar_utils.string_to_grammar grammar_str in 
     try 
       let res = Interpreter.interpret g input in 
       OpegIdl.ErrM.return (Parsetree.Json.string_of_t res)
     with 
       | Failure _ -> OpegIdl.ErrM.return_err (Server.Parse_error "Error during parsing")
   ); 
+
+  Server.get_grammar_list (fun str -> 
+    let grammars = Grammar_utils.string_to_grammar_list str in 
+    let grammar_items = List.map (fun (n, g) -> (n, false, Lib.Grammar.is_closed g)) grammars in 
+    OpegIdl.ErrM.return (grammar_items)
+  );
 
   Server.add (fun a b -> OpegIdl.ErrM.return (a + b)); 
 
