@@ -42,7 +42,15 @@ end = struct
     | Repetition of Repetition_expr.t 
     | Reference of string 
 
-  let eval (state : State.t) p : State.t * Parse_result.t = match p with 
+  let rec handle_whitespace (state : State.t) : State.t = 
+    if Int.equal (String.length state.input) state.pos then state else 
+    match String.get state.input state.pos with 
+    | '\n' | '\t' | '\r' | ' ' -> handle_whitespace {state with pos = state.pos + 1} 
+    | _ -> state 
+
+  let eval (state : State.t) p : State.t * Parse_result.t = 
+    let state = handle_whitespace state in 
+    let (next, r) = match p with 
     | Match m -> Match_expr.eval state m
     | Predicate pred -> Predicate_expr.eval state pred
     | Repetition rep -> Repetition_expr.eval state rep
@@ -50,9 +58,11 @@ end = struct
     | Reference r -> begin match List.assoc_opt r state.grammar.rules with 
       | Some rule -> 
         let new_state = {state with stack = (state.pos, r, 0) :: state.stack} in 
-         Rule.eval new_state rule 
+        Rule.eval new_state rule 
       | None -> failwith "Holes in grammar not yet supported" 
-  end
+    end 
+    in
+    (handle_whitespace next, r)
 end
 
 and Repetition_expr : sig 
