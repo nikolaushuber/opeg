@@ -15,6 +15,7 @@ module OpegServer (R : Idl.RPC) = struct
 
   let s = Param.mk Rpc.Types.string 
   let i = Param.mk Rpc.Types.int 
+  let b = Param.mk Rpc.Types.bool 
   
   type grammar_item = (string * bool * bool)
   [@@deriving rpcty]
@@ -41,6 +42,7 @@ module OpegServer (R : Idl.RPC) = struct
   let parse = declare "parse" [] (s @-> s @-> returning s error)
   let add = declare "add" [] (i @-> i @-> returning i Idl.DefaultError.err)
   let get_grammar_list = declare "get_grammar_list" [] (s @-> returning grammar_list_p Idl.DefaultError.err)
+  let ping = declare "ping" [] (returning b Idl.DefaultError.err)
 end 
 
 (* Use standard id monad *)
@@ -59,9 +61,11 @@ let _ =
 
   Server.get_grammar_list (fun str -> 
     let grammars = Grammar_utils.string_to_grammar_list str in 
-    let grammar_items = List.map (fun (n, g) -> (n, false, Lib.Grammar.is_closed g)) grammars in 
+    let grammar_items = List.map (fun (n, g) -> (n, Bool.not (Int.equal (List.length g.Grammar.parts) 0), Lib.Grammar.is_closed g)) grammars in 
     OpegIdl.ErrM.return (grammar_items)
   );
+
+  Server.ping (OpegIdl.ErrM.return (true)); 
 
   Server.add (fun a b -> OpegIdl.ErrM.return (a + b)); 
 
@@ -78,7 +82,7 @@ let _ =
     let open Idl.IdM in 
     (* Still fascinated that that works *)
     let inp = Zmq.Socket.recv socket in 
-    print_endline ("Received: " ^ inp); 
+    print_endline ("Received: " ^ inp ^ "\n"); 
     let _, id, call = Jsonrpc.version_id_and_call_of_string inp in 
     rpc_func call >>= fun res -> 
       let res_str = Jsonrpc.string_of_response ~id res in 

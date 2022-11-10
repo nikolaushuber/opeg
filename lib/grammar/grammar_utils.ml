@@ -5,7 +5,8 @@ let expand_grammars (glist : (string * Grammar.t) list) : (string * Grammar.t) l
       (name, g) :: list 
     else
       let grammar_parts = List.map (fun part -> List.assoc part list) g.Grammar.parts in 
-      (name, List.fold_left (Grammar.(++)) Grammar.empty grammar_parts) :: list
+      let new_grammar = List.fold_left (Grammar.(++)) Grammar.empty grammar_parts in 
+      (name, {new_grammar with parts = g.Grammar.parts}) :: list
   ) [] glist in 
   List.rev exp_list
 

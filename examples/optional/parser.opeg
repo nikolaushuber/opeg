@@ -1,14 +1,3 @@
-token:
-    | TOK_A "a"
-    | TOK_B "b" 
-    | TOK_C "c" 
-    | TOK_NUM <int> 
-    | TOK_EOF "eof"
-
-parser "parse" start
-
-%% 
-
 start <bool>:
     / "a"? il = TOK_NUM+ "c" "eof" { 
         let sum = List.fold_left (+) 0 in 

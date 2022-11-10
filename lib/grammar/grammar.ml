@@ -33,7 +33,9 @@ and Parse_expr : sig
     | Predicate of Predicate_expr.t 
     | Repetition of Repetition_expr.t 
     | Reference of string 
+  [@@deriving yojson]
 
+  val handle_whitespace : State.t -> State.t 
   val eval : State.t -> t -> State.t * Parse_result.t
 end = struct 
   type t = 
@@ -41,6 +43,7 @@ end = struct
     | Predicate of Predicate_expr.t 
     | Repetition of Repetition_expr.t 
     | Reference of string 
+  [@@deriving yojson]
 
   let rec handle_whitespace (state : State.t) : State.t = 
     if Int.equal (String.length state.input) state.pos then state else 
@@ -60,7 +63,7 @@ end = struct
         let new_state = {state with stack = (state.pos, r, 0) :: state.stack} in 
         Rule.eval new_state rule 
       | None -> failwith "Holes in grammar not yet supported" 
-    end 
+    end  
     in
     (handle_whitespace next, r)
 end
@@ -70,6 +73,7 @@ and Repetition_expr : sig
     | Zero_or_one of Parse_expr.t  
     | Zero_or_more of Parse_expr.t 
     | One_or_more of Parse_expr.t 
+  [@@deriving yojson]
 
   val eval : State.t -> t -> State.t * Parse_result.t
 end = struct 
@@ -77,16 +81,18 @@ end = struct
     | Zero_or_one of Parse_expr.t
     | Zero_or_more of Parse_expr.t
     | One_or_more of Parse_expr.t
+  [@@deriving yojson]
 
   let receval state p = 
-    let rec inner state' p' acc : State.t * Parsetree.t list = 
+    let rec inner state' p' acc : State.t * P.t list = 
       match Parse_expr.eval state' p' with 
       | (next, Parse tree) -> inner next p' (tree :: acc)
-      | (next, No_parse) -> (next, List.rev acc)
+      | (_, No_parse) -> (state', List.rev acc)
     in 
     inner state p []
 
-  let eval state rep : State.t * Parse_result.t = match rep with 
+  let eval state rep : State.t * Parse_result.t = 
+    match rep with
     | Zero_or_one p -> begin 
       match Parse_expr.eval state p with 
       | (next, Parse tree) -> (next, Parse_result.return next tree.pos (Option (Some tree)))
@@ -108,12 +114,14 @@ and Predicate_expr : sig
   type t = 
     | And of Parse_expr.t
     | Not of Parse_expr.t
+  [@@deriving yojson]
 
   val eval : State.t -> t -> State.t * Parse_result.t
 end = struct 
   type t = 
     | And of Parse_expr.t
     | Not of Parse_expr.t
+  [@@deriving yojson]
 
   let eval state p : State.t * Parse_result.t = match p with 
     | And p' -> 
@@ -132,12 +140,14 @@ and Match_expr : sig
   type t = 
     | Quote of string 
     | Regex of string 
+  [@@deriving yojson]
   
   val eval : State.t -> t -> State.t * Parse_result.t 
 end = struct
  type t = 
     | Quote of string 
     | Regex of string 
+  [@@deriving yojson]
   
   let eval (state : State.t) m : State.t * Parse_result.t = match m with 
     | Quote q -> begin 
@@ -175,6 +185,7 @@ and Choice : sig
     symbols : (string option * Parse_expr.t) list; 
     action : string; 
   }
+  [@@deriving yojson]
 
   val eval : State.t -> t -> State.t * Parse_result.t 
 end = struct 
@@ -182,10 +193,22 @@ end = struct
     symbols : (string option * Parse_expr.t) list; 
     action : string; 
   }
+  [@@deriving yojson]
 
   let eval (state : State.t) c = 
     let rec inner syms state' acc : State.t * Parse_result.t = match syms with 
-      | [] -> (state', Parse_result.return state (state.pos, state'.pos) (Tree (List.rev acc)))
+      | [] -> begin 
+        (* Fail if we are in the outermost frame and there is input left *)
+        if List.length state'.State.stack = 1 then begin 
+          let next = Parse_expr.handle_whitespace state' in 
+          if Int.equal next.pos (String.length next.input) then 
+            (state', Parse_result.return state (state.pos, state'.pos) (Tree (List.rev acc)))
+          else
+            (state, No_parse)
+        end 
+        else
+          (state', Parse_result.return state (state.pos, state'.pos) (Tree (List.rev acc)))
+      end 
       | (name, p) :: xs -> 
         begin match Parse_expr.eval state' p with 
         | (next, No_parse) -> (next, No_parse)    (* => next state is irrelevant *)
@@ -197,10 +220,12 @@ end
 
 and Rule : sig 
   type t = Choice.t list
+  [@@deriving yojson]
 
   val eval : State.t -> t -> State.t * Parse_result.t 
 end = struct 
   type t = Choice.t list
+  [@@deriving yojson]
 
   let rec eval state c : State.t * Parse_result.t = match c with 
     | [] -> (state, No_parse) 
@@ -219,6 +244,7 @@ and Gramm_ : sig
     header : string option; 
     parts : string list; 
   }
+  [@@deriving yojson]
 
   val empty : t
 
@@ -229,6 +255,7 @@ end = struct
     header : string option; 
     parts : string list; 
   }
+  [@@deriving yojson]
 
   let empty = {
     rules = []; 
@@ -265,7 +292,6 @@ and State : sig
     stack : (int * string * int) list; 
   }
 
-  val delta : t -> t -> (int * int)
   val make : string -> Gramm_.t -> t 
 end = struct 
   type t = {
@@ -275,8 +301,6 @@ end = struct
     memo : ((int * string), (int * P.t)) Hashtbl.t;
     stack : (int * string * int) list; 
   }
-
-  let delta state1 state2 = (state1.pos, state2.pos)
 
   let make inp g = {
     input = inp;
@@ -314,6 +338,9 @@ end = struct
 end 
 
 include Gramm_
+
+let to_json_string (g : t) : string = 
+  Yojson.Safe.prettify (Yojson.Safe.to_string (Gramm_.yojson_of_t g))
 
 let is_closed (g : t) : bool = 
   let module StringSet = Set.Make (String) in 
