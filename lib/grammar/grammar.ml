@@ -51,21 +51,34 @@ end = struct
     | '\n' | '\t' | '\r' | ' ' -> handle_whitespace {state with pos = state.pos + 1} 
     | _ -> state 
 
+  let print_stack (state : State.t) : unit = 
+    let str = String.concat " -> " 
+    (List.map (fun (pos, r, c) -> "(" ^ r ^ "." ^ string_of_int c ^ " @ " ^ string_of_int pos ^ ")") (List.rev state.stack)) in
+    print_endline str
+
   let eval (state : State.t) p : State.t * Parse_result.t = 
+    print_stack state; 
     let state = handle_whitespace state in 
-    let (next, r) = match p with 
+    let (next, result) = match p with 
     | Match m -> Match_expr.eval state m
     | Predicate pred -> Predicate_expr.eval state pred
     | Repetition rep -> Repetition_expr.eval state rep
     (* TODO: Use hashtbl instead *)
     | Reference r -> begin match List.assoc_opt r state.grammar.rules with 
-      | Some rule -> 
-        let new_state = {state with stack = (state.pos, r, 0) :: state.stack} in 
-        Rule.eval new_state rule 
+      | Some rule -> begin 
+          if Hashtbl.mem state.memo (state.pos, r) then 
+            let (next, res) = Hashtbl.find state.memo (state.pos, r) in 
+            {state with pos = next}, res 
+          else
+            let new_state = {state with stack = (state.pos, r, 0) :: state.stack} in 
+            let (next, res) = Rule.eval new_state rule in 
+            Hashtbl.add next.memo (new_state.pos, r) (next.pos, res); 
+            (next, res) 
+      end 
       | None -> failwith "Holes in grammar not yet supported" 
     end  
     in
-    (handle_whitespace next, r)
+    (handle_whitespace next, result)
 end
 
 and Repetition_expr : sig 
@@ -288,7 +301,7 @@ and State : sig
     input : string; 
     pos : int; 
     grammar : Gramm_.t; 
-    memo : ((int * string), (int * P.t)) Hashtbl.t; 
+    memo : ((int * string), (int * Parse_result.t)) Hashtbl.t; 
     stack : (int * string * int) list; 
   }
 
@@ -298,7 +311,7 @@ end = struct
     input : string; 
     pos : int; 
     grammar : Gramm_.t; 
-    memo : ((int * string), (int * P.t)) Hashtbl.t;
+    memo : ((int * string), (int * Parse_result.t)) Hashtbl.t;
     stack : (int * string * int) list; 
   }
 
