@@ -1,9 +1,14 @@
 module P = Parsetree 
 
-let print_stack (stack : (int * string * int) list) : unit = 
+(* let print_stack (stack : (int * string * int) list) : unit = 
   let list = List.map (fun (pos,s,c) -> "(" ^ string_of_int pos ^ "," ^ s ^ "," ^ string_of_int c ^ ")") stack in 
   let str = String.concat " -> " (List.rev list) in 
-  print_endline str
+  print_endline str *)
+
+(* let print_stack (state : State.t) : unit = 
+    let str = String.concat " -> " 
+    (List.map (fun (pos, r, c) -> "(" ^ r ^ "." ^ string_of_int c ^ " @ " ^ string_of_int pos ^ ")") (List.rev state.stack)) in
+    print_endline str *)
 
 module rec Parse_result : sig 
   type t =
@@ -32,7 +37,7 @@ and Parse_expr : sig
     | Match of Match_expr.t 
     | Predicate of Predicate_expr.t 
     | Repetition of Repetition_expr.t 
-    | Reference of string 
+    | Reference of Reference_expr.t 
   [@@deriving yojson]
 
   val handle_whitespace : State.t -> State.t 
@@ -42,44 +47,87 @@ end = struct
     | Match of Match_expr.t 
     | Predicate of Predicate_expr.t 
     | Repetition of Repetition_expr.t 
-    | Reference of string 
+    | Reference of Reference_expr.t 
   [@@deriving yojson]
 
   let rec handle_whitespace (state : State.t) : State.t = 
     if Int.equal (String.length state.input) state.pos then state else 
     match String.get state.input state.pos with 
-    | '\n' | '\t' | '\r' | ' ' -> handle_whitespace {state with pos = state.pos + 1} 
+    | '\n' | '\t' | '\r' | ' ' -> handle_whitespace (State.reset state (state.pos + 1))
     | _ -> state 
 
-  let print_stack (state : State.t) : unit = 
-    let str = String.concat " -> " 
-    (List.map (fun (pos, r, c) -> "(" ^ r ^ "." ^ string_of_int c ^ " @ " ^ string_of_int pos ^ ")") (List.rev state.stack)) in
-    print_endline str
-
   let eval (state : State.t) p : State.t * Parse_result.t = 
-    print_stack state; 
-    let state = handle_whitespace state in 
-    let (next, result) = match p with 
+    match p with 
     | Match m -> Match_expr.eval state m
     | Predicate pred -> Predicate_expr.eval state pred
     | Repetition rep -> Repetition_expr.eval state rep
-    (* TODO: Use hashtbl instead *)
-    | Reference r -> begin match List.assoc_opt r state.grammar.rules with 
-      | Some rule -> begin 
-          if Hashtbl.mem state.memo (state.pos, r) then 
-            let (next, res) = Hashtbl.find state.memo (state.pos, r) in 
-            {state with pos = next}, res 
-          else
-            let new_state = {state with stack = (state.pos, r, 0) :: state.stack} in 
-            let (next, res) = Rule.eval new_state rule in 
-            Hashtbl.add next.memo (new_state.pos, r) (next.pos, res); 
-            (next, res) 
-      end 
-      | None -> failwith "Holes in grammar not yet supported" 
-    end  
-    in
-    (handle_whitespace next, result)
+    | Reference r -> Reference_expr.eval state r 
 end
+
+and Reference_expr : sig 
+  type t = string 
+  [@@deriving yojson] 
+
+  val eval : State.t -> t -> State.t * Parse_result.t 
+end = struct 
+  type t = string 
+  [@@deriving yojson]
+
+  let is_left_rec (state : State.t) (r : string) = 
+    let (_, name, _) = List.hd state.stack in 
+    if String.equal name r then true else false 
+
+  let direct_left_rec (state : State.t) (name : string) (rule : Rule.t) : State.t * Parse_result.t = 
+    (* Do we already have a solution for this rule at this position? *)
+    if Hashtbl.mem state.memo (state.pos, name) then 
+    begin 
+      Hashtbl.find state.memo (state.pos, name) 
+    end 
+    else 
+    (* This rule has never been tried at this position *)
+    begin 
+      (* Prime the hashtable with a parse failure at this position *)
+      Hashtbl.add state.memo (state.pos, name) (state, No_parse); 
+      let rec _while pos = begin
+        (* Try again from the start of the recursive rule *)
+        let new_state = {state with stack = (state.pos, name, 0) :: state.stack} in 
+        let (next, res) = Rule.eval new_state rule in 
+        match res with 
+        (* Return the last result *) 
+        | No_parse -> Hashtbl.find state.memo (state.pos, name)
+        | Parse p -> 
+          begin 
+            if next.pos <= pos then begin 
+              (* Return last result *)
+              Hashtbl.find state.memo (state.pos, name) 
+            end 
+            else begin 
+              Hashtbl.replace state.memo (pos, name) (next, Parse p); 
+              _while next.pos
+            end 
+          end  
+        end 
+      in 
+      _while state.pos
+    end
+
+  let eval (state : State.t) (r : string) : State.t * Parse_result.t =
+    match List.assoc_opt r state.grammar.rules with 
+    | Some rule -> begin 
+      (* Is this a direct left recursion? *)
+      if is_left_rec state r then 
+        direct_left_rec state r rule
+      else 
+      if Hashtbl.mem state.memo (state.pos, r) then 
+        Hashtbl.find state.memo (state.pos, r)
+      else
+        let new_state = {state with stack = (state.pos, r, 0) :: state.stack} in 
+        let (next, res) = Rule.eval new_state rule in 
+        Hashtbl.add next.memo (new_state.pos, r) (next, res); 
+        (next, res) 
+    end 
+    | None -> failwith "Holes in grammar not yet supported" 
+end 
 
 and Repetition_expr : sig 
   type t = 
@@ -169,7 +217,7 @@ end = struct
         if (String.starts_with ~prefix:q sub) then 
           let len = String.length q in 
           let next_pos = state.pos + len in 
-          let next = {state with pos = next_pos} in 
+          let next = (State.reset state next_pos) in 
           (next, Parse_result.return next (state.pos, next_pos) (Lexeme q))
         else 
           (state, No_parse)
@@ -183,7 +231,7 @@ end = struct
         let ret = Re.exec ~pos:state.pos rx state.input in 
         let (start, len) = Re.Group.offset ret 0 in 
         if Int.equal start state.pos then 
-          let next = {state with pos = len} in 
+          let next = (State.reset state len) in 
           let res = Re.Group.get ret 0 in 
           (next, Parse_result.return next (state.pos, len) (Lexeme res))
         else 
@@ -225,7 +273,9 @@ end = struct
       | (name, p) :: xs -> 
         begin match Parse_expr.eval state' p with 
         | (next, No_parse) -> (next, No_parse)    (* => next state is irrelevant *)
-        | (next, Parse tree) -> inner xs {next with stack = state'.stack} ({tree with name = name} :: acc)
+        | (next, Parse tree) -> 
+          let next = Parse_expr.handle_whitespace next in 
+          inner xs {next with stack = state'.stack} ({tree with name = name} :: acc)
         end
     in 
     inner c.symbols state []
@@ -301,17 +351,18 @@ and State : sig
     input : string; 
     pos : int; 
     grammar : Gramm_.t; 
-    memo : ((int * string), (int * Parse_result.t)) Hashtbl.t; 
+    memo : ((int * string), (t * Parse_result.t)) Hashtbl.t; 
     stack : (int * string * int) list; 
   }
 
   val make : string -> Gramm_.t -> t 
+  val reset : t -> int -> t 
 end = struct 
   type t = {
     input : string; 
     pos : int; 
     grammar : Gramm_.t; 
-    memo : ((int * string), (int * Parse_result.t)) Hashtbl.t;
+    memo : ((int * string), (t * Parse_result.t)) Hashtbl.t;
     stack : (int * string * int) list; 
   }
 
@@ -322,6 +373,8 @@ end = struct
     memo = Hashtbl.create 10;
     stack = [0, fst (List.hd g.rules), 0];
   }
+
+  let reset s pos = {s with pos = pos}
 (* 
   and f_translate_pos (str : string) = 
     let lst = String.split_on_char '\n' str in 
