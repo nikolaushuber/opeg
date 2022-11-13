@@ -1,8 +1,8 @@
 let grammar_str = {|
 grammar optional = <{
     start: 
-          "a"? "c" { }
-        / "c"* { }
+          "a"? "c" $$ { }
+        / "c"* $$ { }
 }>
 |}
 
@@ -55,6 +55,13 @@ let%expect_test "ac" =
               "choice": 0,
               "pos": [ 1, 2 ],
               "node": [ "Lexeme", "c" ]
+            },
+            {
+              "name": "None",
+              "rule": "start",
+              "choice": 0,
+              "pos": [ 2, 2 ],
+              "node": "Eof"
             }
           ]
         ]
@@ -84,6 +91,13 @@ let%expect_test "c" =
               "choice": 0,
               "pos": [ 0, 1 ],
               "node": [ "Lexeme", "c" ]
+            },
+            {
+              "name": "None",
+              "rule": "start",
+              "choice": 0,
+              "pos": [ 1, 1 ],
+              "node": "Eof"
             }
           ]
         ]
@@ -104,29 +118,47 @@ let%expect_test "cccc" =
               "name": "None",
               "rule": "start",
               "choice": 1,
-              "pos": [ 0, 1 ],
-              "node": [ "Lexeme", "c" ]
+              "pos": [ 0, 4 ],
+              "node": [
+                "Tree",
+                [
+                  {
+                    "name": "None",
+                    "rule": "start",
+                    "choice": 1,
+                    "pos": [ 0, 1 ],
+                    "node": [ "Lexeme", "c" ]
+                  },
+                  {
+                    "name": "None",
+                    "rule": "start",
+                    "choice": 1,
+                    "pos": [ 1, 2 ],
+                    "node": [ "Lexeme", "c" ]
+                  },
+                  {
+                    "name": "None",
+                    "rule": "start",
+                    "choice": 1,
+                    "pos": [ 2, 3 ],
+                    "node": [ "Lexeme", "c" ]
+                  },
+                  {
+                    "name": "None",
+                    "rule": "start",
+                    "choice": 1,
+                    "pos": [ 3, 4 ],
+                    "node": [ "Lexeme", "c" ]
+                  }
+                ]
+              ]
             },
             {
               "name": "None",
               "rule": "start",
               "choice": 1,
-              "pos": [ 1, 2 ],
-              "node": [ "Lexeme", "c" ]
-            },
-            {
-              "name": "None",
-              "rule": "start",
-              "choice": 1,
-              "pos": [ 2, 3 ],
-              "node": [ "Lexeme", "c" ]
-            },
-            {
-              "name": "None",
-              "rule": "start",
-              "choice": 1,
-              "pos": [ 3, 4 ],
-              "node": [ "Lexeme", "c" ]
+              "pos": [ 4, 4 ],
+              "node": "Eof"
             }
           ]
         ]
@@ -140,7 +172,25 @@ let%expect_test "" =
         "rule": "start",
         "choice": 1,
         "pos": [ 0, 0 ],
-        "node": [ "Tree", [] ]
+        "node": [
+          "Tree",
+          [
+            {
+              "name": "None",
+              "rule": "start",
+              "choice": 1,
+              "pos": [ 0, 0 ],
+              "node": [ "Tree", [] ]
+            },
+            {
+              "name": "None",
+              "rule": "start",
+              "choice": 1,
+              "pos": [ 0, 0 ],
+              "node": "Eof"
+            }
+          ]
+        ]
       } |}]
 
 let%test _ = expect_no_parse "aa"

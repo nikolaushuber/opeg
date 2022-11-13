@@ -1,14 +1,10 @@
-(*  Position in file: [b_lnum, b_col, e_lnum, e_col] means the 
-    current element starts on line b_lnum at column b_col and end on line 
-    e_lnum in column e_col. All indices are starting at 0. 
-*)
-
 type pos = (int * int)
 
 type node = [
   | Lexeme of string 
   | Option of t option 
   | Tree of t list 
+  | Eof 
 ] <ocaml repr="classic">
 
 type t = {

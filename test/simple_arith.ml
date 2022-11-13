@@ -5,6 +5,8 @@ let simple_arith_grammar_str =
         | Mul of ast * ast 
         | Num of int 
     %}
+
+    start: expr $$ { }
     
     expr: 
           t = term "+" e = expr { Add(t, e) }
@@ -35,53 +37,17 @@ let%expect_test "1+2+3" =
   [%expect {|
     {
       "name": "None",
-      "rule": "expr",
+      "rule": "start",
       "choice": 0,
       "pos": [ 0, 5 ],
       "node": [
         "Tree",
         [
           {
-            "name": [ "Some", "t" ],
-            "rule": "term",
-            "choice": 1,
-            "pos": [ 0, 1 ],
-            "node": [
-              "Tree",
-              [
-                {
-                  "name": [ "Some", "a" ],
-                  "rule": "atom",
-                  "choice": 0,
-                  "pos": [ 0, 1 ],
-                  "node": [
-                    "Tree",
-                    [
-                      {
-                        "name": [ "Some", "n" ],
-                        "rule": "number",
-                        "choice": 0,
-                        "pos": [ 0, 1 ],
-                        "node": [ "Lexeme", "1" ]
-                      }
-                    ]
-                  ]
-                }
-              ]
-            ]
-          },
-          {
             "name": "None",
             "rule": "expr",
             "choice": 0,
-            "pos": [ 1, 2 ],
-            "node": [ "Lexeme", "+" ]
-          },
-          {
-            "name": [ "Some", "e" ],
-            "rule": "expr",
-            "choice": 0,
-            "pos": [ 2, 5 ],
+            "pos": [ 0, 5 ],
             "node": [
               "Tree",
               [
@@ -89,7 +55,7 @@ let%expect_test "1+2+3" =
                   "name": [ "Some", "t" ],
                   "rule": "term",
                   "choice": 1,
-                  "pos": [ 2, 3 ],
+                  "pos": [ 0, 1 ],
                   "node": [
                     "Tree",
                     [
@@ -97,7 +63,7 @@ let%expect_test "1+2+3" =
                         "name": [ "Some", "a" ],
                         "rule": "atom",
                         "choice": 0,
-                        "pos": [ 2, 3 ],
+                        "pos": [ 0, 1 ],
                         "node": [
                           "Tree",
                           [
@@ -105,8 +71,8 @@ let%expect_test "1+2+3" =
                               "name": [ "Some", "n" ],
                               "rule": "number",
                               "choice": 0,
-                              "pos": [ 2, 3 ],
-                              "node": [ "Lexeme", "2" ]
+                              "pos": [ 0, 1 ],
+                              "node": [ "Lexeme", "1" ]
                             }
                           ]
                         ]
@@ -118,14 +84,14 @@ let%expect_test "1+2+3" =
                   "name": "None",
                   "rule": "expr",
                   "choice": 0,
-                  "pos": [ 3, 4 ],
+                  "pos": [ 1, 2 ],
                   "node": [ "Lexeme", "+" ]
                 },
                 {
                   "name": [ "Some", "e" ],
                   "rule": "expr",
-                  "choice": 1,
-                  "pos": [ 4, 5 ],
+                  "choice": 0,
+                  "pos": [ 2, 5 ],
                   "node": [
                     "Tree",
                     [
@@ -133,7 +99,7 @@ let%expect_test "1+2+3" =
                         "name": [ "Some", "t" ],
                         "rule": "term",
                         "choice": 1,
-                        "pos": [ 4, 5 ],
+                        "pos": [ 2, 3 ],
                         "node": [
                           "Tree",
                           [
@@ -141,7 +107,7 @@ let%expect_test "1+2+3" =
                               "name": [ "Some", "a" ],
                               "rule": "atom",
                               "choice": 0,
-                              "pos": [ 4, 5 ],
+                              "pos": [ 2, 3 ],
                               "node": [
                                 "Tree",
                                 [
@@ -149,7 +115,246 @@ let%expect_test "1+2+3" =
                                     "name": [ "Some", "n" ],
                                     "rule": "number",
                                     "choice": 0,
+                                    "pos": [ 2, 3 ],
+                                    "node": [ "Lexeme", "2" ]
+                                  }
+                                ]
+                              ]
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "name": "None",
+                        "rule": "expr",
+                        "choice": 0,
+                        "pos": [ 3, 4 ],
+                        "node": [ "Lexeme", "+" ]
+                      },
+                      {
+                        "name": [ "Some", "e" ],
+                        "rule": "expr",
+                        "choice": 1,
+                        "pos": [ 4, 5 ],
+                        "node": [
+                          "Tree",
+                          [
+                            {
+                              "name": [ "Some", "t" ],
+                              "rule": "term",
+                              "choice": 1,
+                              "pos": [ 4, 5 ],
+                              "node": [
+                                "Tree",
+                                [
+                                  {
+                                    "name": [ "Some", "a" ],
+                                    "rule": "atom",
+                                    "choice": 0,
                                     "pos": [ 4, 5 ],
+                                    "node": [
+                                      "Tree",
+                                      [
+                                        {
+                                          "name": [ "Some", "n" ],
+                                          "rule": "number",
+                                          "choice": 0,
+                                          "pos": [ 4, 5 ],
+                                          "node": [ "Lexeme", "3" ]
+                                        }
+                                      ]
+                                    ]
+                                  }
+                                ]
+                              ]
+                            }
+                          ]
+                        ]
+                      }
+                    ]
+                  ]
+                }
+              ]
+            ]
+          },
+          {
+            "name": "None",
+            "rule": "start",
+            "choice": 0,
+            "pos": [ 5, 5 ],
+            "node": "Eof"
+          }
+        ]
+      ]
+    } |}] 
+
+let%expect_test "(1+2)*3" = 
+  parse_string "(1+2)*3";
+  [%expect {|
+    {
+      "name": "None",
+      "rule": "start",
+      "choice": 0,
+      "pos": [ 0, 7 ],
+      "node": [
+        "Tree",
+        [
+          {
+            "name": "None",
+            "rule": "expr",
+            "choice": 1,
+            "pos": [ 0, 7 ],
+            "node": [
+              "Tree",
+              [
+                {
+                  "name": [ "Some", "t" ],
+                  "rule": "term",
+                  "choice": 0,
+                  "pos": [ 0, 7 ],
+                  "node": [
+                    "Tree",
+                    [
+                      {
+                        "name": [ "Some", "a" ],
+                        "rule": "atom",
+                        "choice": 1,
+                        "pos": [ 0, 5 ],
+                        "node": [
+                          "Tree",
+                          [
+                            {
+                              "name": "None",
+                              "rule": "atom",
+                              "choice": 1,
+                              "pos": [ 0, 1 ],
+                              "node": [ "Lexeme", "(" ]
+                            },
+                            {
+                              "name": [ "Some", "e" ],
+                              "rule": "expr",
+                              "choice": 0,
+                              "pos": [ 1, 4 ],
+                              "node": [
+                                "Tree",
+                                [
+                                  {
+                                    "name": [ "Some", "t" ],
+                                    "rule": "term",
+                                    "choice": 1,
+                                    "pos": [ 1, 2 ],
+                                    "node": [
+                                      "Tree",
+                                      [
+                                        {
+                                          "name": [ "Some", "a" ],
+                                          "rule": "atom",
+                                          "choice": 0,
+                                          "pos": [ 1, 2 ],
+                                          "node": [
+                                            "Tree",
+                                            [
+                                              {
+                                                "name": [ "Some", "n" ],
+                                                "rule": "number",
+                                                "choice": 0,
+                                                "pos": [ 1, 2 ],
+                                                "node": [ "Lexeme", "1" ]
+                                              }
+                                            ]
+                                          ]
+                                        }
+                                      ]
+                                    ]
+                                  },
+                                  {
+                                    "name": "None",
+                                    "rule": "expr",
+                                    "choice": 0,
+                                    "pos": [ 2, 3 ],
+                                    "node": [ "Lexeme", "+" ]
+                                  },
+                                  {
+                                    "name": [ "Some", "e" ],
+                                    "rule": "expr",
+                                    "choice": 1,
+                                    "pos": [ 3, 4 ],
+                                    "node": [
+                                      "Tree",
+                                      [
+                                        {
+                                          "name": [ "Some", "t" ],
+                                          "rule": "term",
+                                          "choice": 1,
+                                          "pos": [ 3, 4 ],
+                                          "node": [
+                                            "Tree",
+                                            [
+                                              {
+                                                "name": [ "Some", "a" ],
+                                                "rule": "atom",
+                                                "choice": 0,
+                                                "pos": [ 3, 4 ],
+                                                "node": [
+                                                  "Tree",
+                                                  [
+                                                    {
+                                                      "name": [ "Some", "n" ],
+                                                      "rule": "number",
+                                                      "choice": 0,
+                                                      "pos": [ 3, 4 ],
+                                                      "node": [ "Lexeme", "2" ]
+                                                    }
+                                                  ]
+                                                ]
+                                              }
+                                            ]
+                                          ]
+                                        }
+                                      ]
+                                    ]
+                                  }
+                                ]
+                              ]
+                            },
+                            {
+                              "name": "None",
+                              "rule": "atom",
+                              "choice": 1,
+                              "pos": [ 4, 5 ],
+                              "node": [ "Lexeme", ")" ]
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "name": "None",
+                        "rule": "term",
+                        "choice": 0,
+                        "pos": [ 5, 6 ],
+                        "node": [ "Lexeme", "*" ]
+                      },
+                      {
+                        "name": [ "Some", "t" ],
+                        "rule": "term",
+                        "choice": 1,
+                        "pos": [ 6, 7 ],
+                        "node": [
+                          "Tree",
+                          [
+                            {
+                              "name": [ "Some", "a" ],
+                              "rule": "atom",
+                              "choice": 0,
+                              "pos": [ 6, 7 ],
+                              "node": [
+                                "Tree",
+                                [
+                                  {
+                                    "name": [ "Some", "n" ],
+                                    "rule": "number",
+                                    "choice": 0,
+                                    "pos": [ 6, 7 ],
                                     "node": [ "Lexeme", "3" ]
                                   }
                                 ]
@@ -163,180 +368,13 @@ let%expect_test "1+2+3" =
                 }
               ]
             ]
-          }
-        ]
-      ]
-    } |}] 
-
-let%expect_test "(1+2)*3" = 
-  parse_string "(1+2)*3";
-  [%expect {|
-    {
-      "name": "None",
-      "rule": "expr",
-      "choice": 1,
-      "pos": [ 0, 7 ],
-      "node": [
-        "Tree",
-        [
+          },
           {
-            "name": [ "Some", "t" ],
-            "rule": "term",
+            "name": "None",
+            "rule": "start",
             "choice": 0,
-            "pos": [ 0, 7 ],
-            "node": [
-              "Tree",
-              [
-                {
-                  "name": [ "Some", "a" ],
-                  "rule": "atom",
-                  "choice": 1,
-                  "pos": [ 0, 5 ],
-                  "node": [
-                    "Tree",
-                    [
-                      {
-                        "name": "None",
-                        "rule": "atom",
-                        "choice": 1,
-                        "pos": [ 0, 1 ],
-                        "node": [ "Lexeme", "(" ]
-                      },
-                      {
-                        "name": [ "Some", "e" ],
-                        "rule": "expr",
-                        "choice": 0,
-                        "pos": [ 1, 4 ],
-                        "node": [
-                          "Tree",
-                          [
-                            {
-                              "name": [ "Some", "t" ],
-                              "rule": "term",
-                              "choice": 1,
-                              "pos": [ 1, 2 ],
-                              "node": [
-                                "Tree",
-                                [
-                                  {
-                                    "name": [ "Some", "a" ],
-                                    "rule": "atom",
-                                    "choice": 0,
-                                    "pos": [ 1, 2 ],
-                                    "node": [
-                                      "Tree",
-                                      [
-                                        {
-                                          "name": [ "Some", "n" ],
-                                          "rule": "number",
-                                          "choice": 0,
-                                          "pos": [ 1, 2 ],
-                                          "node": [ "Lexeme", "1" ]
-                                        }
-                                      ]
-                                    ]
-                                  }
-                                ]
-                              ]
-                            },
-                            {
-                              "name": "None",
-                              "rule": "expr",
-                              "choice": 0,
-                              "pos": [ 2, 3 ],
-                              "node": [ "Lexeme", "+" ]
-                            },
-                            {
-                              "name": [ "Some", "e" ],
-                              "rule": "expr",
-                              "choice": 1,
-                              "pos": [ 3, 4 ],
-                              "node": [
-                                "Tree",
-                                [
-                                  {
-                                    "name": [ "Some", "t" ],
-                                    "rule": "term",
-                                    "choice": 1,
-                                    "pos": [ 3, 4 ],
-                                    "node": [
-                                      "Tree",
-                                      [
-                                        {
-                                          "name": [ "Some", "a" ],
-                                          "rule": "atom",
-                                          "choice": 0,
-                                          "pos": [ 3, 4 ],
-                                          "node": [
-                                            "Tree",
-                                            [
-                                              {
-                                                "name": [ "Some", "n" ],
-                                                "rule": "number",
-                                                "choice": 0,
-                                                "pos": [ 3, 4 ],
-                                                "node": [ "Lexeme", "2" ]
-                                              }
-                                            ]
-                                          ]
-                                        }
-                                      ]
-                                    ]
-                                  }
-                                ]
-                              ]
-                            }
-                          ]
-                        ]
-                      },
-                      {
-                        "name": "None",
-                        "rule": "atom",
-                        "choice": 1,
-                        "pos": [ 4, 5 ],
-                        "node": [ "Lexeme", ")" ]
-                      }
-                    ]
-                  ]
-                },
-                {
-                  "name": "None",
-                  "rule": "term",
-                  "choice": 0,
-                  "pos": [ 5, 6 ],
-                  "node": [ "Lexeme", "*" ]
-                },
-                {
-                  "name": [ "Some", "t" ],
-                  "rule": "term",
-                  "choice": 1,
-                  "pos": [ 6, 7 ],
-                  "node": [
-                    "Tree",
-                    [
-                      {
-                        "name": [ "Some", "a" ],
-                        "rule": "atom",
-                        "choice": 0,
-                        "pos": [ 6, 7 ],
-                        "node": [
-                          "Tree",
-                          [
-                            {
-                              "name": [ "Some", "n" ],
-                              "rule": "number",
-                              "choice": 0,
-                              "pos": [ 6, 7 ],
-                              "node": [ "Lexeme", "3" ]
-                            }
-                          ]
-                        ]
-                      }
-                    ]
-                  ]
-                }
-              ]
-            ]
+            "pos": [ 7, 7 ],
+            "node": "Eof"
           }
         ]
       ]

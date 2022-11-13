@@ -20,6 +20,7 @@
 %token TK_GRAMMAR "grammar" 
 %token TK_DEF_START "<{"
 %token TK_DEF_END "}>"
+%token TK_EOI "$$" 
 
 %nonassoc "?"
 %left "+"
@@ -81,3 +82,4 @@ expr_type:
     | e = expr_type "*" { Parse_expr.Repetition (Repetition_expr.Zero_or_more e) }
     | e = expr_type "+" { Parse_expr.Repetition (Repetition_expr.One_or_more e) }
     | n = TK_IDENTIFIER { Parse_expr.Reference n }
+    | "$$" { Parse_expr.Eof }

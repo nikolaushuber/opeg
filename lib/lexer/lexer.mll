@@ -28,6 +28,7 @@ rule read_token = parse
     | "<{" { TK_DEF_START }
     | "}>" { TK_DEF_END }
     | "grammar" { TK_GRAMMAR }
+    | "$$" { TK_EOI }
     | "/*" { read_comment lexbuf }
     | "{" { read_semantic_action (Buffer.create 10) 0 lexbuf } 
     | '"' { let id = read_string (Buffer.create 10) lexbuf in TK_STRING(id) } 

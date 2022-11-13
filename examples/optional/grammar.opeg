@@ -1,5 +1,5 @@
 grammar optional = <{
     start: 
-          "a"? "c" { }
-        / "c"* { }
+          "a"? "c" $$ { }
+        / "c"* $$ { }
 }>

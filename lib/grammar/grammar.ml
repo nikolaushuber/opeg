@@ -1,21 +1,12 @@
 module P = Parsetree 
 
-(* let print_stack (stack : (int * string * int) list) : unit = 
-  let list = List.map (fun (pos,s,c) -> "(" ^ string_of_int pos ^ "," ^ s ^ "," ^ string_of_int c ^ ")") stack in 
-  let str = String.concat " -> " (List.rev list) in 
-  print_endline str *)
-
-(* let print_stack (state : State.t) : unit = 
-    let str = String.concat " -> " 
-    (List.map (fun (pos, r, c) -> "(" ^ r ^ "." ^ string_of_int c ^ " @ " ^ string_of_int pos ^ ")") (List.rev state.stack)) in
-    print_endline str *)
-
 module rec Parse_result : sig 
   type t =
     | Parse of P.t
     | No_parse
 
   val return : ?name:string option -> State.t -> P.pos -> P.node -> t
+  val to_string : t -> string 
 end = struct
   type t =
     | Parse of P.t
@@ -30,6 +21,10 @@ end = struct
       rule = rule; 
       choice = choice; 
     }
+
+  let to_string (p : t) : string = match p with 
+    | No_parse -> "No parse" 
+    | Parse p -> P.to_string p 
 end
 
 and Parse_expr : sig 
@@ -38,6 +33,7 @@ and Parse_expr : sig
     | Predicate of Predicate_expr.t 
     | Repetition of Repetition_expr.t 
     | Reference of Reference_expr.t 
+    | Eof 
   [@@deriving yojson]
 
   val handle_whitespace : State.t -> State.t 
@@ -48,6 +44,7 @@ end = struct
     | Predicate of Predicate_expr.t 
     | Repetition of Repetition_expr.t 
     | Reference of Reference_expr.t 
+    | Eof
   [@@deriving yojson]
 
   let rec handle_whitespace (state : State.t) : State.t = 
@@ -56,12 +53,31 @@ end = struct
     | '\n' | '\t' | '\r' | ' ' -> handle_whitespace (State.reset state (state.pos + 1))
     | _ -> state 
 
+  (* let print_stack (state : State.t) : unit = 
+    let str = String.concat " -> " 
+    (List.map (fun (pos, r, c) -> "(" ^ r ^ "." ^ string_of_int c ^ " @ " ^ string_of_int pos ^ ")") (List.rev state.stack)) in
+    print_endline str *)
+
   let eval (state : State.t) p : State.t * Parse_result.t = 
-    match p with 
+    let state = handle_whitespace state in 
+    let (next, res) = match p with 
     | Match m -> Match_expr.eval state m
     | Predicate pred -> Predicate_expr.eval state pred
     | Repetition rep -> Repetition_expr.eval state rep
     | Reference r -> Reference_expr.eval state r 
+    | Eof ->   
+      if Int.equal state.pos (String.length state.input) then 
+        (state, Parse_result.return state (state.pos, state.pos) Eof) 
+      else 
+        (state, No_parse)
+    in
+    (* let _ = print_endline ("Trying " ^ (match p with 
+      | Match _ -> "match" 
+      | Predicate _ -> "pred" 
+      | Repetition _ -> "rep" 
+      | Reference r -> "ref(" ^ r ^ ")" 
+      | Eof -> "eof") ^ " @ " ^ string_of_int state.pos ^ ": " ^ Parse_result.to_string res) in  *)
+    next, res 
 end
 
 and Reference_expr : sig 
@@ -77,54 +93,45 @@ end = struct
     let (_, name, _) = List.hd state.stack in 
     if String.equal name r then true else false 
 
-  let direct_left_rec (state : State.t) (name : string) (rule : Rule.t) : State.t * Parse_result.t = 
-    (* Do we already have a solution for this rule at this position? *)
-    if Hashtbl.mem state.memo (state.pos, name) then 
-    begin 
-      Hashtbl.find state.memo (state.pos, name) 
-    end 
-    else 
-    (* This rule has never been tried at this position *)
-    begin 
-      (* Prime the hashtable with a parse failure at this position *)
-      Hashtbl.add state.memo (state.pos, name) (state, No_parse); 
-      let rec _while pos = begin
-        (* Try again from the start of the recursive rule *)
-        let new_state = {state with stack = (state.pos, name, 0) :: state.stack} in 
-        let (next, res) = Rule.eval new_state rule in 
-        match res with 
-        (* Return the last result *) 
-        | No_parse -> Hashtbl.find state.memo (state.pos, name)
-        | Parse p -> 
-          begin 
-            if next.pos <= pos then begin 
-              (* Return last result *)
-              Hashtbl.find state.memo (state.pos, name) 
-            end 
-            else begin 
-              Hashtbl.replace state.memo (pos, name) (next, Parse p); 
-              _while next.pos
-            end 
-          end  
+  let direct_left_rec (state : State.t) (rule : Rule.t) : State.t * Parse_result.t = 
+    let (_, name, _) = List.hd state.stack in 
+    (* Prime the hashtable with a parse failure at this position *)
+    Hashtbl.add state.memo (state.pos, name) (state, No_parse); 
+    
+    let rec _while (curr : State.t) =
+      (* Try again from the start of the recursive rule *)
+      let (next, res) = Rule.eval state rule in 
+      match res with 
+      (* Return the last result *) 
+      | No_parse -> Hashtbl.find state.memo (state.pos, name)
+      | Parse _ ->  
+        if next.pos <= curr.pos then  
+          (* Return last result *)
+          Hashtbl.find state.memo (state.pos, name)  
+        else begin 
+          Hashtbl.replace state.memo (state.pos, name) (next, res); 
+          _while next
         end 
-      in 
-      _while state.pos
-    end
+    in 
+    _while state 
 
-  let eval (state : State.t) (r : string) : State.t * Parse_result.t =
+  let eval (state : State.t) (r : t) : State.t * Parse_result.t =
     match List.assoc_opt r state.grammar.rules with 
     | Some rule -> begin 
+      if Hashtbl.mem state.memo (state.pos, r) then
+        let (next, res) = Hashtbl.find state.memo (state.pos, r) in 
+        (* print_endline ("Chash hit " ^ r ^ " @ " ^ string_of_int state.pos ^ ": " ^ Parse_result.to_string res);  *)
+        next, res
+      else
+      let state = {state with stack = (state.pos, r, 0) :: state.stack} in 
       (* Is this a direct left recursion? *)
       if is_left_rec state r then 
-        direct_left_rec state r rule
-      else 
-      if Hashtbl.mem state.memo (state.pos, r) then 
-        Hashtbl.find state.memo (state.pos, r)
-      else
-        let new_state = {state with stack = (state.pos, r, 0) :: state.stack} in 
-        let (next, res) = Rule.eval new_state rule in 
-        Hashtbl.add next.memo (new_state.pos, r) (next, res); 
+        direct_left_rec state rule
+      else begin
+        let (next, res) = Rule.eval state rule in 
+        Hashtbl.add next.memo (state.pos, r) (next, res); 
         (next, res) 
+      end
     end 
     | None -> failwith "Holes in grammar not yet supported" 
 end 
@@ -218,6 +225,7 @@ end = struct
           let len = String.length q in 
           let next_pos = state.pos + len in 
           let next = (State.reset state next_pos) in 
+          (* let _ = print_endline ("Found: " ^ q) in  *)
           (next, Parse_result.return next (state.pos, next_pos) (Lexeme q))
         else 
           (state, No_parse)
@@ -233,6 +241,7 @@ end = struct
         if Int.equal start state.pos then 
           let next = (State.reset state len) in 
           let res = Re.Group.get ret 0 in 
+          (* let _ = print_endline ("Found: " ^ res) in  *)
           (next, Parse_result.return next (state.pos, len) (Lexeme res))
         else 
           (state, No_parse)
@@ -258,18 +267,7 @@ end = struct
 
   let eval (state : State.t) c = 
     let rec inner syms state' acc : State.t * Parse_result.t = match syms with 
-      | [] -> begin 
-        (* Fail if we are in the outermost frame and there is input left *)
-        if List.length state'.State.stack = 1 then begin 
-          let next = Parse_expr.handle_whitespace state' in 
-          if Int.equal next.pos (String.length next.input) then 
-            (state', Parse_result.return state (state.pos, state'.pos) (Tree (List.rev acc)))
-          else
-            (state, No_parse)
-        end 
-        else
-          (state', Parse_result.return state (state.pos, state'.pos) (Tree (List.rev acc)))
-      end 
+      | [] -> (state', Parse_result.return state (state.pos, state'.pos) (Tree (List.rev acc)))
       | (name, p) :: xs -> 
         begin match Parse_expr.eval state' p with 
         | (next, No_parse) -> (next, No_parse)    (* => next state is irrelevant *)

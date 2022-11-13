@@ -53,6 +53,7 @@ let to_string (p : t) : string =
     | Option None -> "" 
     | Option (Some o) -> to_string o 
     | Tree s -> String.concat "" (List.map to_string s)
+    | Eof -> "" 
   in to_string (simplify p) 
 
 let pp_ptree (fmt : Format.formatter) (n : t) : unit = 

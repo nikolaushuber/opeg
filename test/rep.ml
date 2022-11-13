@@ -1,6 +1,6 @@
 let grammar_str = {|
 grammar rep = <{
-  start: "a"+ "b"? "c"* { }
+  start: "a"+ "b"? "c"* $$ { }
 }>
 |}
 
@@ -60,6 +60,13 @@ let%expect_test "abc" =
             "choice": 0,
             "pos": [ 2, 3 ],
             "node": [ "Lexeme", "c" ]
+          },
+          {
+            "name": "None",
+            "rule": "start",
+            "choice": 0,
+            "pos": [ 3, 3 ],
+            "node": "Eof"
           }
         ]
       ]
@@ -132,6 +139,13 @@ let%expect_test "aacc" =
                 }
               ]
             ]
+          },
+          {
+            "name": "None",
+            "rule": "start",
+            "choice": 0,
+            "pos": [ 4, 4 ],
+            "node": "Eof"
           }
         ]
       ]
@@ -198,6 +212,13 @@ let%expect_test "abcc" =
                 }
               ]
             ]
+          },
+          {
+            "name": "None",
+            "rule": "start",
+            "choice": 0,
+            "pos": [ 4, 4 ],
+            "node": "Eof"
           }
         ]
       ]
@@ -246,6 +267,13 @@ let%expect_test "ab" =
             "choice": 0,
             "pos": [ 2, 2 ],
             "node": [ "Tree", [] ]
+          },
+          {
+            "name": "None",
+            "rule": "start",
+            "choice": 0,
+            "pos": [ 2, 2 ],
+            "node": "Eof"
           }
         ]
       ]
@@ -282,6 +310,13 @@ let%expect_test "a" =
             "choice": 0,
             "pos": [ 1, 1 ],
             "node": [ "Tree", [] ]
+          },
+          {
+            "name": "None",
+            "rule": "start",
+            "choice": 0,
+            "pos": [ 1, 1 ],
+            "node": "Eof"
           }
         ]
       ]
