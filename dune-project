@@ -20,7 +20,7 @@
 
 (documentation https://github.com/nikolaushuber/opeg)
 
-(version 0.2)
+(version 0.3)
 
 (package
  (name opeg)

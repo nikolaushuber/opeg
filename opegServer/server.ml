@@ -43,6 +43,7 @@ module OpegServer (R : Idl.RPC) = struct
   let add = declare "add" [] (i @-> i @-> returning i Idl.DefaultError.err)
   let get_grammar_list = declare "get_grammar_list" [] (s @-> returning grammar_list_p Idl.DefaultError.err)
   let ping = declare "ping" [] (returning b Idl.DefaultError.err)
+  let generate = declare "generate_code" [] (s @-> returning s error)
 end 
 
 (* Use standard id monad *)
@@ -68,6 +69,19 @@ let _ =
   Server.ping (OpegIdl.ErrM.return (true)); 
 
   Server.add (fun a b -> OpegIdl.ErrM.return (a + b)); 
+
+  Server.generate (fun str -> 
+    let g = Grammar_utils.string_to_grammar str in 
+    let fmt = Format.str_formatter in 
+    let fmt_funcs = Format.pp_get_formatter_out_functions fmt () in 
+    let fmt_funcs = {fmt_funcs with 
+      out_indent = (fun n -> fmt_funcs.out_string (String.make (2*n) ' ') 0 (2*n))} 
+    in 
+    let fmt = Format.formatter_of_out_functions fmt_funcs in 
+    Gen.gen_grammar fmt g; 
+    let out = Format.flush_str_formatter () in 
+    OpegIdl.ErrM.return out 
+  );
 
   let rpc_func = OpegIdl.server Server.implementation in 
 
