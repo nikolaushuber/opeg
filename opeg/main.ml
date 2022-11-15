@@ -1,13 +1,5 @@
 open Lib 
 
-let version = "0.1" 
-
-let welcome = String.concat "\n" [
-    "Welcome to Opeg!"; 
-    "Version " ^ version ^ " running on " ^ Sys.os_type ; 
-    "For more information type \"help\""; 
-  ]
-
 let usage_msg = "opeg <file> -o <output>" 
 let input_file = ref "" 
 let output_file = ref "" 
@@ -25,16 +17,23 @@ let () =
   Arg.parse speclist anon_fun usage_msg; 
   (* Did we specify an input file? *)
   match String.equal "" !input_file with 
-  (* Yes, so perform the given work *)
-  | false -> begin 
+  | false -> begin  
+    let basename = Filename.remove_extension (Filename.basename !input_file) in 
+    let out_file = 
+      if String.equal "" !output_file then 
+        basename ^ ".ml" 
+    else 
+        !output_file
+    in
     let g = Grammar_utils.file_to_grammar !input_file in 
-    ignore g; 
-    if String.equal "" !output_file then 
-      Loop.loop (Some g) 
-  end 
-  (* No, therfore start the interactive loop *)
-  | true -> begin 
-    print_endline welcome; 
-    print_endline ""; 
-    Loop.loop None  
-  end 
+    let oc = open_out out_file in 
+    let fmt = Format.formatter_of_out_channel oc in 
+    let fmt_funcs = Format.pp_get_formatter_out_functions fmt () in 
+    let fmt_funcs = {fmt_funcs with 
+      out_indent = (fun n -> fmt_funcs.out_string (String.make (2*n) ' ') 0 (2*n))} 
+    in 
+    Format.pp_set_formatter_out_functions fmt fmt_funcs; 
+    Gen.gen_grammar fmt g; 
+    close_out oc 
+  end
+  | true -> failwith "No input file provided" 

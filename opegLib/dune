@@ -1,3 +1,4 @@
 (library 
  (name opegLib)
- (public_name opegLib))
+ (public_name opegLib)
+ (libraries re))

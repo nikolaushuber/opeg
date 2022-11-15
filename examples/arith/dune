@@ -9,3 +9,6 @@
 
 ; (ocamllex lexer)
 
+(library 
+ (name arith)
+ (libraries opegLib))
