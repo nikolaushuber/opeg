@@ -63,7 +63,11 @@ This will install all dependencies and create both *opeg* and *opeg_boot*.
 
 MIT
 
+## Notes 
+
+This work was part of a project for a compiler construction course taken at KTH in Stockholm. The final [report](doc/Opeg_Report.pdf) gives some insight into the implementation and some benchmarking results. 
+
 [//]: # (These are reference links used in the body of this note and get stripped out when the markdown processor does its job. There is no need to format nicely because it shouldn't be seen. Thanks SO - http://stackoverflow.com/questions/4823468/store-comments-in-markdown-syntax)
 
    [menhir]: <http://gallium.inria.fr/~fpottier/menhir/>
- 
+

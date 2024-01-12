@@ -53,11 +53,6 @@ end = struct
     | '\n' | '\t' | '\r' | ' ' -> handle_whitespace (State.reset state (state.pos + 1))
     | _ -> state 
 
-  (* let print_stack (state : State.t) : unit = 
-    let str = String.concat " -> " 
-    (List.map (fun (pos, r, c) -> "(" ^ r ^ "." ^ string_of_int c ^ " @ " ^ string_of_int pos ^ ")") (List.rev state.stack)) in
-    print_endline str *)
-
   let eval (state : State.t) p : State.t * Parse_result.t = 
     let state = handle_whitespace state in 
     let (next, res) = match p with 
@@ -71,12 +66,6 @@ end = struct
       else 
         (state, No_parse)
     in
-    (* let _ = print_endline ("Trying " ^ (match p with 
-      | Match _ -> "match" 
-      | Predicate _ -> "pred" 
-      | Repetition _ -> "rep" 
-      | Reference r -> "ref(" ^ r ^ ")" 
-      | Eof -> "eof") ^ " @ " ^ string_of_int state.pos ^ ": " ^ Parse_result.to_string res) in  *)
     next, res 
 end
 
@@ -373,32 +362,6 @@ end = struct
   }
 
   let reset s pos = {s with pos = pos}
-(* 
-  and f_translate_pos (str : string) = 
-    let lst = String.split_on_char '\n' str in 
-    let lst = List.map String.length lst in 
-    let lst = List.fold_left (fun init e -> 
-      let (_, _end) = List.hd init in 
-      (_end, _end + 1 + e) :: init
-      ) [(0,0)] lst  
-    in 
-    (* Adapt the first and last element *)
-    let (_begin, _end) = List.hd lst in
-    let lst = List.tl (List.rev lst) in 
-  
-    fun (pos1, pos2) -> 
-      let rec _inner pos ranges depth =
-        match ranges with 
-        | (x, y) :: rest -> 
-          if x <= pos && y > pos then 
-            (depth, pos - x) 
-          else 
-            _inner pos rest (depth + 1)
-        | _ -> raise (Invalid_argument "Position outside range")
-      in
-      let (l1, c1) = _inner pos1 lst 0 in 
-      let (l2, c2) = _inner pos2 lst 0 in 
-      (l1, c1, l2, c2) *)
 end 
 
 include Gramm_
